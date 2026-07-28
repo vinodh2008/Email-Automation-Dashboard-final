@@ -94,12 +94,20 @@ const Templates = () => {
     setIsTesting(true);
     setTestResult(null);
     try {
-      const result = await api.testPromptTemplate(testingTemplate.id, {
-        customer_name: sampleName,
-        email_sender: sampleSender,
-        email_subject: sampleSubject,
-        email_body: sampleBody
-      });
+      const vars = {};
+      try { vars.templateVars = (testingTemplate.prompt_content || '').match(/\{\{(\w+)\}\}/g) || []; } catch { vars.templateVars = []; }
+      const detectedVars = [...new Set((vars.templateVars || []).map(v => v.replace(/\{\{|\}\}/g, '')))];
+
+      const sampleInputs = {};
+      for (const v of detectedVars) {
+        if (v === 'customer_name' || v === 'name') sampleInputs[v] = sampleName;
+        else if (v === 'email_sender' || v === 'sender') sampleInputs[v] = sampleSender;
+        else if (v === 'email_subject' || v === 'subject') sampleInputs[v] = sampleSubject;
+        else if (v === 'email_body' || v === 'body') sampleInputs[v] = sampleBody;
+        else sampleInputs[v] = `[${v}]`;
+      }
+
+      const result = await api.testPromptTemplate(testingTemplate.id, sampleInputs);
       setTestResult(result || {});
     } catch (err) {
       setTestResult({ success: false, error: err.message || 'Unknown error' });

@@ -26,9 +26,6 @@ class RoleOut(BaseModel):
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
     @classmethod
     def from_orm_model(cls, obj):
         return cls(
@@ -36,7 +33,7 @@ class RoleOut(BaseModel):
             name=obj.name,
             permissions=obj.permissions_json or [],
             created_at=str(obj.created_at) if obj.created_at else None,
-            updated_at=str(obj.updated_at) if obj.updated_at else None,
+            updated_at=str(getattr(obj, 'updated_at', None) or ''),
         )
 
 
