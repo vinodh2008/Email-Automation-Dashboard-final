@@ -564,10 +564,10 @@ export const WorkflowControl = () => {
                         <StatusBadge status={ex.status} />
                       </div>
                       <div className="space-y-1 text-xs text-gray-600 dark:text-gray-300 font-mono">
-                        <div>➔ Step 1: Evaluated conditions matching email ({ex.email_id.substring(0,8)}...)</div>
-                        <div>➔ Step 2: Resolved Prompt Template & injected variables</div>
-                        <div>➔ Step 3: Generated AI Draft Response</div>
-                        <div>➔ Step 4: Queued AI draft for human review</div>
+                        <div>📧 Email: {ex.email_id ? ex.email_id.substring(0,8) + '...' : 'N/A'}</div>
+                        <div>⏱ Executed: {new Date(ex.executed_at).toLocaleString()}</div>
+                        <div>📊 Status: {ex.status}</div>
+                        {ex.error_message && <div className="text-red-500">❌ Error: {ex.error_message}</div>}
                       </div>
                     </div>
                   ))}

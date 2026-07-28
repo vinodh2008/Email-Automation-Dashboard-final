@@ -157,7 +157,7 @@ const Templates = () => {
               <Mail className="w-5 h-5 text-blue-500" />
               Email Templates
             </h2>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors">
+            <button disabled className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors opacity-50 cursor-not-allowed" title="Coming soon">
               <Plus className="w-4 h-4" /> Create Email Template
             </button>
           </div>

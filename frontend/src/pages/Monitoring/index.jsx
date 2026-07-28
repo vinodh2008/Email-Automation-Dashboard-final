@@ -36,7 +36,7 @@ const Monitoring = () => {
         labels: metrics.map(m => m.title),
         datasets: [{
           label: 'Current Metrics',
-          data: metrics.map(m => Number(m.val.replace(/[^0-9\.]/g, ''))),
+          data: metrics.map(m => Number((m.val || '0').replace(/[^0-9\.]/g, ''))),
           backgroundColor: metrics.map(m => {
             // simple color mapping based on Tailwind bg class
             const colorMap = {
@@ -72,7 +72,24 @@ const Monitoring = () => {
     );
   }
 
-  // metrics state is populated from API; fallback to empty array
+  // Loading state
+  if (!metrics.length) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Activity className="w-6 h-6 text-teal-600" />
+            System Monitoring
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Real-time health and performance metrics for the backend engine.</p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+          <span className="ml-3 text-gray-500">Loading metrics...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -96,8 +113,8 @@ const Monitoring = () => {
             </div>
           </div>
         ))}
-      <canvas ref={chartRef} className="w-full h-64 mt-4"></canvas>
       </div>
+      <canvas ref={chartRef} className="w-full h-64 mt-4"></canvas>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Live Service Status</h3>

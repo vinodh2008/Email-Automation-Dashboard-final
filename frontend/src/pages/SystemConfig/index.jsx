@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, Shield, Server, Bell, Key, Mail, RefreshCw, C
 import { useAuth } from '../../context/AuthContext';
 import { useMailbox } from '../../context/MailboxContext';
 import { api } from '../../api/client';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const PROVIDER_MODELS = {
   openai: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini'],
@@ -350,7 +351,7 @@ const GmailTab = ({ activeMailbox, isConnected, isSyncing, systemStatus, actionL
       try {
         const [dbRes, sysRes] = await Promise.allSettled([
           api.getSystemStatus(),
-          fetch(`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}/api/v1/health/database`).then(r => r.json()),
+          api.getDatabaseHealth(),
         ]);
         setHealthStatus({
           gmail: isConnected ? 'ok' : 'warning',
@@ -531,6 +532,7 @@ const AITab = ({
   onSave, onTest, onDelete, onCopyKey, onProviderTypeChange, getDefaultForm,
   feedback, setFeedback
 }) => {
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const availableModels = PROVIDER_MODELS[providerForm.provider_type] || [];
 
   return (
@@ -649,7 +651,7 @@ const AITab = ({
                           >
                             Edit
                           </button>
-                          <button onClick={() => onDelete(p.id)} className="text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                          <button onClick={() => setDeleteConfirmId(p.id)} className="text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -670,12 +672,10 @@ const AITab = ({
             </div>
             <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 flex-wrap">
               {providers.map((p, i) => (
-                <React.Fragment key={p.id}>
-                  <span className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold">
-                    {p.name}
-                  </span>
-                  {i < providers.length - 1 && <span className="text-blue-400">→</span>}
-                </React.Fragment>
+                <span key={p.id} className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold">
+                  {p.name}
+                </span>
+                {i < providers.length - 1 && <span className="text-blue-400">→</span>}
               ))}
               <span className="text-blue-400">→</span>
               <span className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold text-gray-500">
@@ -686,6 +686,17 @@ const AITab = ({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { onDelete(deleteConfirmId); setDeleteConfirmId(null); }}
+        title="Delete AI Provider"
+        message="Are you sure you want to delete this AI provider? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+      />
     </div>
   );
 };

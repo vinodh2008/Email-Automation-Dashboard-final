@@ -334,6 +334,11 @@ export const api = {
     return response || {};
   },
 
+  getDatabaseHealth: async () => {
+    const response = await axiosClient.get('/health/database');
+    return response || {};
+  },
+
   getCurrentTask: async () => {
     try {
       // Axios interceptor unwraps APIResponse -> data = CurrentTaskResponse { current_task: {...} | null }

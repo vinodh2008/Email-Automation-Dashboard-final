@@ -29,6 +29,16 @@ class RoleOut(BaseModel):
     class Config:
         from_attributes = True
 
+    @classmethod
+    def from_orm_model(cls, obj):
+        return cls(
+            id=obj.id,
+            name=obj.name,
+            permissions=obj.permissions_json or [],
+            created_at=str(obj.created_at) if obj.created_at else None,
+            updated_at=str(obj.updated_at) if obj.updated_at else None,
+        )
+
 
 router = APIRouter(prefix="/admin/roles", tags=["admin-roles"], dependencies=[Depends(get_current_user)])
 
@@ -45,7 +55,8 @@ def list_roles(
     db: Session = Depends(get_db),
     _: dict = Depends(require_permission("view_roles")),
 ):
-    return db.query(UserRole).offset(skip).limit(limit).all()
+    roles = db.query(UserRole).offset(skip).limit(limit).all()
+    return [RoleOut.from_orm_model(r) for r in roles]
 
 @router.post("/", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
 def create_role(
@@ -68,7 +79,7 @@ def create_role(
         before=None,
         after=role,
     )
-    return role
+    return RoleOut.from_orm_model(role)
 
 @router.put("/{role_id}", response_model=RoleOut)
 def update_role(
@@ -99,7 +110,7 @@ def update_role(
         before=before,
         after={k: getattr(role, k) for k in before.keys()},
     )
-    return role
+    return RoleOut.from_orm_model(role)
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_role(
@@ -147,4 +158,4 @@ def clone_role(
         before=None,
         after=cloned,
     )
-    return cloned
+    return RoleOut.from_orm_model(cloned)

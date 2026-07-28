@@ -55,19 +55,27 @@ const ApprovalQueue = () => {
   };
 
   const handleBulkApprove = async () => {
-    for (const id of selectedIds) {
-      await api.approveAIDraft(id);
+    try {
+      for (const id of selectedIds) {
+        await api.approveAIDraft(id);
+      }
+      setSelectedIds([]);
+      fetchApprovals();
+    } catch (err) {
+      console.error('Failed to bulk approve:', err);
     }
-    setSelectedIds([]);
-    fetchApprovals();
   };
 
   const handleBulkReject = async () => {
-    for (const id of selectedIds) {
-      await api.rejectAIDraft(id);
+    try {
+      for (const id of selectedIds) {
+        await api.rejectAIDraft(id);
+      }
+      setSelectedIds([]);
+      fetchApprovals();
+    } catch (err) {
+      console.error('Failed to bulk reject:', err);
     }
-    setSelectedIds([]);
-    fetchApprovals();
   };
 
   const filteredApprovals = approvals.filter(item => {
