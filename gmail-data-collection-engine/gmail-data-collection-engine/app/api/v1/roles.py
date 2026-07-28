@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.db.session import get_db
-from app.models.user import UserRole
+from app.models.user import UserRole, User
 from app.auth.dependencies import get_current_user, require_permission
 from app.utils.audit import create_audit_log
 
@@ -30,7 +30,7 @@ class RoleOut(BaseModel):
         from_attributes = True
 
 
-router = APIRouter(prefix="/admin/roles", tags=["admin-roles"])
+router = APIRouter(prefix="/admin/roles", tags=["admin-roles"], dependencies=[Depends(get_current_user)])
 
 def _get_role_or_404(db: Session, role_id: UUID):
     role = db.query(UserRole).filter(UserRole.id == role_id).first()
@@ -108,6 +108,9 @@ def delete_role(
     current: dict = Depends(require_permission("delete_roles")),
 ):
     role = _get_role_or_404(db, role_id)
+    user_count = db.query(User).filter(User.role == role.name).count()
+    if user_count > 0:
+        raise HTTPException(status_code=409, detail=f"Role is assigned to {user_count} user(s). Reassign them first.")
     db.delete(role)
     db.commit()
     create_audit_log(

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { USE_MOCK_DATA } from '../config/appConfig';
 import { normalizeEmail, normalizeWorkflowExecution } from './adapters';
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -55,33 +54,6 @@ axiosClient.interceptors.response.use(
       console.error("Network Failure: Backend is unreachable.", error);
     } else if (error.response?.status >= 500) {
       console.error("Server Error:", error.config?.url, error.response?.status);
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Add global interceptors for raw axios calls as well
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    } else if (!error.response) {
-      console.error("Network Failure: Backend is unreachable.");
-      // Could dispatch a global event here for a toast notification
-    } else if (error.response?.status >= 500) {
-      console.error("Server Error: Something went wrong on the backend.");
     }
     return Promise.reject(error);
   }
@@ -221,16 +193,6 @@ export const api = {
   // Until then, this call uses a separate Axios instance without the /api/v1 prefix.
   // ---------------------------------------------------------
   getEmails: async ({ status = 'all', search = '', page = 1, pageSize = 10 }) => {
-    if (USE_MOCK_DATA) {
-      const mockRawData = [
-          { id: '1', sender: 'test@example.com', subject: 'Invoice Mock', category: 'finance', status: 'sent', sent_time: new Date().toISOString() },
-          { id: '2', sender: 'user@domain.com', subject: 'Welcome Mock', category: 'onboarding', status: 'failed', sent_time: new Date().toISOString() }
-      ];
-      return { 
-        data: mockRawData.map(normalizeEmail), 
-        total: 2, page, page_size: pageSize 
-      };
-    }
     try {
       const baseHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '');
       const response = await axios.get(`${baseHost}/emails/`, { 
@@ -248,9 +210,6 @@ export const api = {
   },
 
   getEmailDetail: async (id) => {
-    if (USE_MOCK_DATA) {
-      return normalizeEmail({ id, subject: 'Mock Details', sender_email: 'mock@mock.com', body_text: 'Mock content', execution_timeline: [] });
-    }
     const baseHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '');
     const response = await axios.get(`${baseHost}/emails/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -260,17 +219,11 @@ export const api = {
   },
   
   retryEmail: async (id) => {
-    if (USE_MOCK_DATA) {
-      return { id, status: 'pending', sent_time: new Date().toISOString() };
-    }
     const response = await axiosClient.post(`/emails/${id}/retry`);
     return normalizeEmail(validateObject(response.data || response, 'Email Retry Response'));
   },
 
   getEmailStats: async () => {
-    if (USE_MOCK_DATA) {
-      return { total: 100, collected: 80, parsed: 10, completed: 5, failed: 5 };
-    }
     const baseHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '');
     const response = await axios.get(`${baseHost}/emails/stats`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -279,9 +232,6 @@ export const api = {
   },
 
   exportEmails: async (status = 'all', search = '') => {
-    if (USE_MOCK_DATA) {
-      return; // Mock doesn't support real file download
-    }
     const baseHost = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '');
     const response = await axios.get(`${baseHost}/emails/export`, {
       params: { status, search },
@@ -385,16 +335,6 @@ export const api = {
   },
 
   getCurrentTask: async () => {
-    if (USE_MOCK_DATA) {
-      return {
-        task_id: "mock-1",
-        task_name: "Mock Sync Task",
-        description: "Syncing mock emails...",
-        progress: 45,
-        eta_seconds: 12,
-        worker_id: "worker-1"
-      };
-    }
     try {
       // Axios interceptor unwraps APIResponse -> data = CurrentTaskResponse { current_task: {...} | null }
       const response = await axiosClient.get('/automation/current-task');
@@ -406,9 +346,6 @@ export const api = {
   },
   
   getAutomationQueue: async () => { 
-    if (USE_MOCK_DATA) {
-      return { data: [{ task_id: 'q-1', task_name: 'Process rules', status: 'queued', estimated_time: '2m' }] };
-    }
     try {
       // Axios interceptor unwraps APIResponse -> data = QueueResponse { data: [...], total: n }
       const response = await axiosClient.get('/automation/queue');
@@ -421,13 +358,6 @@ export const api = {
   },
   
   getAutomationHistory: async () => { 
-    if (USE_MOCK_DATA) {
-      return { 
-        data: [
-          { id: 'h-1', status: 'success', type: 'workflow_success', title: 'Workflow Executed', description: 'Step completed', timestamp: new Date().toISOString() }
-        ] 
-      };
-    }
     try {
       // Axios interceptor unwraps APIResponse -> data = HistoryResponse { data: [...], total, page, page_size }
       const response = await axiosClient.get('/automation/history');
@@ -443,12 +373,6 @@ export const api = {
   // Notifications
   // ---------------------------------------------------------
   getNotifications: async () => {
-    if (USE_MOCK_DATA) {
-      return [
-        { id: '1', type: 'error', message: 'Workflow "Finance" failed on email "Invoice"', timestamp: new Date().toISOString() },
-        { id: '2', type: 'success', message: 'Workflow "Onboarding" matched a new email', timestamp: new Date(Date.now() - 3600000).toISOString() }
-      ];
-    }
     const response = await axiosClient.get('/notifications');
     return response || [];
   },

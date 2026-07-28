@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from app.db.session import get_db
 from app.models import MailboxAccount, Email, Attachment, SyncRun, SyncError
+from app.auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_user)])
 
 @router.get("/metrics")
 def dashboard_metrics(db: Session = Depends(get_db)):

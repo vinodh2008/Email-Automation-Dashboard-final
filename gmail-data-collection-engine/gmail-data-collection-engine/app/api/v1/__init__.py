@@ -13,6 +13,7 @@ from app.api.v1.ai_providers import router as ai_providers_router
 from app.api.v1.email_templates import router as email_templates_router
 from app.api.v1.logs import router as logs_router
 from app.api.v1.users import router as users_router
+from app.api.v1.roles import router as roles_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(dashboard_router)
@@ -29,3 +30,4 @@ api_v1_router.include_router(ai_providers_router)
 api_v1_router.include_router(email_templates_router)
 api_v1_router.include_router(logs_router)
 api_v1_router.include_router(users_router)
+api_v1_router.include_router(roles_router)

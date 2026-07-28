@@ -8,8 +8,9 @@ import json
 
 from app.db.session import get_db
 from app.models.system_log import SystemLog
+from app.auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/logs", tags=["logs"])
+router = APIRouter(prefix="/logs", tags=["logs"], dependencies=[Depends(get_current_user)])
 
 
 class SystemLogResponse(BaseModel):

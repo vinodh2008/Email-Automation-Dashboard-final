@@ -70,7 +70,7 @@ class SyncService:
         fallback_full_sync_used: bool = False
     ):
         """Finalize a sync run with all accumulated metrics."""
-        run = self.db.query(SyncRun).get(sync_run_id)
+        run = self.db.query(SyncRun).filter(SyncRun.id == sync_run_id).first()
         if not run:
             logger.error(f"SyncRun {sync_run_id} not found — cannot complete.")
             return

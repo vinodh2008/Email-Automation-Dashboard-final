@@ -44,9 +44,9 @@ class WorkflowExecutionService(BaseService):
         
         for workflow in workflows:
             # Avoid duplicate execution for the same email and workflow
-            existing = self.db.query(WorkflowExecution).filter_by(
-                workflow_id=workflow.id, 
-                email_id=email.id
+            existing = self.db.query(WorkflowExecution).filter(
+                WorkflowExecution.workflow_id == workflow.id,
+                WorkflowExecution.email_id == email.id
             ).first()
             if existing:
                 continue
@@ -209,7 +209,7 @@ class WorkflowExecutionService(BaseService):
                     
                     prompt_str = "Draft a polite and helpful response to the following customer email:\nSubject: {{email_subject}}\nFrom: {{email_sender}}\n\n{{email_body}}"
                     if prompt_template_id:
-                        pt = self.db.query(PromptTemplate).get(prompt_template_id)
+                        pt = self.db.query(PromptTemplate).filter(PromptTemplate.id == prompt_template_id).first()
                         if pt and pt.prompt_content:
                             prompt_str = pt.prompt_content
                             

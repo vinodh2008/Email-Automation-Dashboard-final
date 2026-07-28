@@ -19,10 +19,12 @@ from app.schemas.admin import (
 )
 from app.clients.supabase_client import get_supabase_client
 from app.scheduler.scheduler_service import scheduler_service
+from app.auth.dependencies import get_current_user
 
 admin_router = APIRouter(
     prefix="/admin",
-    tags=["Admin Dashboard"]
+    tags=["Admin Dashboard"],
+    dependencies=[Depends(get_current_user)]
 )
 
 @admin_router.get(

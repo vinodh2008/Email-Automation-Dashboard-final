@@ -9,9 +9,10 @@ from app.db.session import get_db
 from app.models import MailboxAccount, SyncRun, Email, SyncError
 from app.scheduler.scheduler_service import scheduler_service
 from app.config import settings
+from app.auth.dependencies import get_current_user
 import os
 
-router = APIRouter(prefix="/system", tags=["System Monitoring"])
+router = APIRouter(prefix="/system", tags=["System Monitoring"], dependencies=[Depends(get_current_user)])
 
 
 @router.get("/status")

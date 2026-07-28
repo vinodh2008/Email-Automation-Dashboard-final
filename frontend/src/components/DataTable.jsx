@@ -24,7 +24,7 @@ export const DataTable = ({
             <tr>
               {columns.map((col) => (
                 <th
-                  key={col.header || col.accessor || Math.random()}
+                  key={col.header || col.accessor || `col-${idx}`}
                   scope="col"
                   className={`px-6 py-3 text-left text-label-bold uppercase tracking-wider text-on-surface-variant ${col.className || ''}`}
                 >
@@ -36,7 +36,7 @@ export const DataTable = ({
           <tbody className="bg-surface divide-y divide-outline-variant">
             {data.map((row) => (
               <tr key={row[keyField]} className="hover:bg-surface-container-low transition-colors">
-                {columns.map((col) => (
+              {columns.map((col, idx) => (
                   <td key={col.header || col.accessor} className={`px-6 py-4 whitespace-nowrap text-body-md text-on-surface ${col.cellClassName || ''}`}>
                     {col.render ? col.render(row) : row[col.accessor]}
                   </td>

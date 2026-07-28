@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.sync_orchestrator import SyncOrchestrator
 from app.providers.gmail_provider import GmailProvider
+from app.auth.dependencies import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/sync", tags=["sync"])
+router = APIRouter(prefix="/sync", tags=["sync"], dependencies=[Depends(get_current_user)])
 
 @router.post("/{mailbox_account_id}")
 def trigger_sync(mailbox_account_id: str, db: Session = Depends(get_db)):

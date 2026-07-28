@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Clock, FileText, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 import { api } from '../../api/client';
 import { StatusBadge } from '../StatusBadge';
+import DOMPurify from 'dompurify';
 
 export const EmailDetailDrawer = ({ emailId, onClose }) => {
   const [detail, setDetail] = useState(null);
@@ -102,7 +103,7 @@ export const EmailDetailDrawer = ({ emailId, onClose }) => {
                   {detail.body_html && (
                     <div>
                       <h4 className="text-label-md text-on-surface-variant mb-2">HTML Outline</h4>
-                      <div className="p-3 bg-surface-container-lowest border border-outline-variant rounded-md text-body-sm max-h-60 overflow-y-auto" dangerouslySetInnerHTML={{__html: detail.body_html}} />
+                      <div className="p-3 bg-surface-container-lowest border border-outline-variant rounded-md text-body-sm max-h-60 overflow-y-auto" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(detail.body_html)}} />
                     </div>
                   )}
                 </div>

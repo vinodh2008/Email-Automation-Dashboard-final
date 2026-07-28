@@ -14,9 +14,8 @@ engine = create_engine(
     max_overflow=10,
 )
 
-# Log runtime DB configuration
-logger.info(f"Runtime DATABASE_URL from settings: {settings.database_url}")
-logger.info(f"SQLAlchemy engine URL: {engine.url}")
+# Log runtime DB connection (never log credentials)
+logger.info("Database engine initialized successfully")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -113,7 +112,7 @@ def ensure_full_schema():
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS system_settings (
                     key VARCHAR(100) PRIMARY KEY,
-                    value TEXT NOT NULL,
+                    value_json JSONB NOT NULL,
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
                 );
             """))

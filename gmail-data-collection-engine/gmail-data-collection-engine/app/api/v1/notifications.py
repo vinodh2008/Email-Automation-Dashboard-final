@@ -7,8 +7,9 @@ from app.models import WorkflowExecution, SyncError, Email, SyncRun
 from pydantic import BaseModel
 from typing import List
 from app.core.responses import success_response, APIResponse
+from app.auth.dependencies import get_current_user
 
-router = APIRouter(prefix="/notifications", tags=["Notifications"])
+router = APIRouter(prefix="/notifications", tags=["Notifications"], dependencies=[Depends(get_current_user)])
 
 class NotificationItem(BaseModel):
     id: str

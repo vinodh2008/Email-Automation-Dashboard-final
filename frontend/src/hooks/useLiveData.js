@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useGlobalRefresh } from '../context/RefreshContext';
 
 export const useLiveData = (fetchFn, pollingInterval = null, dependencies = [], enabled = true) => {
@@ -9,6 +9,8 @@ export const useLiveData = (fetchFn, pollingInterval = null, dependencies = [], 
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isPolling, setIsPolling] = useState(false);
+
+  const depsKey = useMemo(() => JSON.stringify(dependencies), [dependencies]);
 
   const fetchData = useCallback(async (isSilentPoll = false) => {
     if (!isSilentPoll) {
@@ -125,7 +127,8 @@ export const useLiveData = (fetchFn, pollingInterval = null, dependencies = [], 
 
     let eventSource;
     try {
-      const sseUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/events/stream`;
+      const token = localStorage.getItem('token');
+      const sseUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/events/stream${token ? `?token=${token}` : ''}`;
       eventSource = new EventSource(sseUrl);
 
       eventSource.addEventListener('sync_completed', () => {
@@ -142,7 +145,7 @@ export const useLiveData = (fetchFn, pollingInterval = null, dependencies = [], 
       if (pollTimer) clearInterval(pollTimer);
       if (eventSource) eventSource.close();
     };
-  }, [...dependencies, fetchData, pollingInterval, globalRefreshKey, enabled]);
+  }, [depsKey, fetchData, pollingInterval, globalRefreshKey, enabled]);
 
   const refresh = () => fetchData(false).catch(() => {});
 

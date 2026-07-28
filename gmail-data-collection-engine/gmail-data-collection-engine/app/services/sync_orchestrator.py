@@ -71,7 +71,7 @@ class SyncOrchestrator:
         logger.info(f"[LOCK] Lock acquired for mailbox {account_id} (token={lock_token[:8]}...)")
         
         try:
-            account = self.db.query(MailboxAccount).get(account_id)
+            account = self.db.query(MailboxAccount).filter(MailboxAccount.id == account_id).first()
             if not account:
                 logger.error(f"[SYNC] Account {account_id} not found in database.")
                 return False

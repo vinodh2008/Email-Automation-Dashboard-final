@@ -116,11 +116,13 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
                 <p className="text-gray-400 text-xs truncate">{user?.email || ''}</p>
               </div>
               <div className="py-1">
-                <button className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2 transition-colors">
+                <button disabled className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2 transition-colors opacity-50 cursor-not-allowed">
                   <User size={16} /> My Profile
+                  <span className="ml-auto text-[10px] text-gray-500">Soon</span>
                 </button>
-                <button className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2 transition-colors">
+                <button disabled className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-white/10 flex items-center gap-2 transition-colors opacity-50 cursor-not-allowed">
                   <Settings size={16} /> Account Settings
+                  <span className="ml-auto text-[10px] text-gray-500">Soon</span>
                 </button>
               </div>
               <div className="py-1 border-t border-[#3a3a3a]">
