@@ -119,7 +119,7 @@ def delete_role(
     current: dict = Depends(require_permission("delete_roles")),
 ):
     role = _get_role_or_404(db, role_id)
-    user_count = db.query(User).filter(User.role == role.name).count()
+    user_count = db.query(User).filter(User.role_id == role.id).count()
     if user_count > 0:
         raise HTTPException(status_code=409, detail=f"Role is assigned to {user_count} user(s). Reassign them first.")
     db.delete(role)
