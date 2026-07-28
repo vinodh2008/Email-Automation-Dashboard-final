@@ -119,16 +119,63 @@ def delete_prompt_template(template_id: str, db: Session = Depends(get_db)):
     return {"success": True, "message": "Prompt template deleted"}
 
 
+@router.post("/{template_id}/clone")
+def clone_prompt_template(template_id: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    template = db.query(PromptTemplate).filter(PromptTemplate.id == template_id, PromptTemplate.is_active == True).first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Prompt template not found")
+    clone = PromptTemplate(
+        name=f"{template.name} (Copy)",
+        purpose=template.purpose,
+        description=template.description,
+        prompt_content=template.prompt_content,
+        variables_json=template.variables_json,
+        status="draft",
+        user_id=current_user.get("id")
+    )
+    db.add(clone)
+    db.commit()
+    db.refresh(clone)
+    usage_counts = _get_usage_counts([clone.id], db)
+    return _to_response(clone, db, usage_counts)
+
+
 @router.post("/{template_id}/test")
 def test_prompt_template(template_id: str, payload: PromptTemplateTest, db: Session = Depends(get_db)):
     template = db.query(PromptTemplate).filter(PromptTemplate.id == template_id, PromptTemplate.is_active == True).first()
     if not template:
         raise HTTPException(status_code=404, detail="Prompt template not found")
+    import time, json
+    start = time.time()
     try:
         ai_service = AIService(db=db)
+
+        variables_in_prompt = set(re.findall(r'\{\{(\w+)\}\}', template.prompt_content))
+        missing_vars = variables_in_prompt - set(payload.sample_inputs.keys())
+        if missing_vars:
+            return {"success": False, "error": f"Missing variables: {', '.join(missing_vars)}", "missing_variables": list(missing_vars)}
+
         rendered = ai_service.render_prompt(template.prompt_content, payload.sample_inputs)
-        response = ai_service.generate_reply(rendered)
-        return {"success": True, "rendered_prompt": rendered, "ai_response": response}
+        system_context = "You are a professional, empathetic customer support assistant for Utservio. Write a helpful, personalized reply to the customer's email. Do NOT repeat the prompt back. Just write the email reply directly. Use the customer's name if available. Be concise and professional."
+        response = ai_service.generate_reply(rendered, system_context=system_context)
+        elapsed = round(time.time() - start, 2)
+
+        provider_used = "Static Fallback"
+        db_providers = ai_service._get_db_providers()
+        if db_providers:
+            provider_used = f"{db_providers[0].name} ({db_providers[0].provider_type})"
+
+        return {
+            "success": True,
+            "rendered_prompt": rendered,
+            "ai_response": response,
+            "execution_time_seconds": elapsed,
+            "model_used": db_providers[0].model if db_providers else "gpt-4o (fallback)",
+            "provider_used": provider_used,
+            "variables_replaced": list(variables_in_prompt),
+            "template_version": template.status,
+            "prompt_name": template.name,
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

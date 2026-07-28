@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Shield, Sparkles, Trash2, Play, Check, Mail } from 'lucide-react';
+import { FileText, Plus, Shield, Sparkles, Trash2, Play, Check, Mail, Copy } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 
@@ -22,7 +22,8 @@ const Templates = () => {
   const [sampleSender, setSampleSender] = useState('john.doe@acme.com');
   const [sampleSubject, setSampleSubject] = useState('Urgent Refund Request for Order #9910');
   const [sampleBody, setSampleBody] = useState('Hi, I requested a refund 3 days ago for order #9910. Please update me on the status.');
-  const [testResult, setTestResult] = useState('');
+  const [sampleName, setSampleName] = useState('John Doe');
+  const [testResult, setTestResult] = useState(null);
   const [isTesting, setIsTesting] = useState(false);
 
   const fetchPromptTemplates = async () => {
@@ -79,25 +80,29 @@ const Templates = () => {
     }
   };
 
+  const handleClonePrompt = async (id) => {
+    try {
+      await api.clonePromptTemplate(id);
+      fetchPromptTemplates();
+    } catch (err) {
+      console.error('Failed to clone prompt:', err);
+    }
+  };
+
   const handleRunTest = async () => {
     if (!testingTemplate) return;
     setIsTesting(true);
-    setTestResult('');
+    setTestResult(null);
     try {
       const result = await api.testPromptTemplate(testingTemplate.id, {
-        customer_name: 'John Doe',
+        customer_name: sampleName,
         email_sender: sampleSender,
         email_subject: sampleSubject,
         email_body: sampleBody
       });
-      const safeResult = result || {};
-      if (safeResult.success) {
-        setTestResult(`--- Rendered Prompt ---\n${safeResult.rendered_prompt || ''}\n\n--- AI Response ---\n${safeResult.ai_response || ''}`);
-      } else {
-        setTestResult(`Test failed: ${safeResult.error || 'Unknown error'}`);
-      }
+      setTestResult(result || {});
     } catch (err) {
-      setTestResult(`Test failed: ${err.message || 'Unknown error'}`);
+      setTestResult({ success: false, error: err.message || 'Unknown error' });
     } finally {
       setIsTesting(false);
     }
@@ -236,12 +241,19 @@ const Templates = () => {
                       <button
                         onClick={() => {
                           setTestingTemplate(p);
-                          setTestResult('');
+                          setTestResult(null);
                         }}
                         className="text-xs bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-lg font-semibold hover:bg-indigo-100 flex items-center gap-1 transition-colors"
                         title="Test Prompt with Sample Inputs"
                       >
-                        <Play className="w-3 h-3 fill-current" /> Test Prompt
+                        <Play className="w-3 h-3 fill-current" /> Test
+                      </button>
+                      <button
+                        onClick={() => handleClonePrompt(p.id)}
+                        className="text-gray-400 hover:text-indigo-500 p-1 rounded-lg transition-colors"
+                        title="Clone Template"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeletePrompt(p.id)}
@@ -264,16 +276,14 @@ const Templates = () => {
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 flex-wrap">
                     <span>Variables:</span>
                     {(() => {
-                      try {
-                        const vars = JSON.parse(p.variables_json || '[]');
-                        return vars.map(v => (
-                          <span key={v} className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded font-mono text-[11px]">
-                            {`{{${v}}}`}
-                          </span>
-                        ));
-                      } catch {
-                        return <span className="text-gray-400">None</span>;
-                      }
+                      const contentVars = (p.prompt_content || '').match(/\{\{(\w+)\}\}/g) || [];
+                      const detectedVars = [...new Set(contentVars.map(v => v.replace(/\{\{|\}\}/g, '')))];
+                      if (detectedVars.length === 0) return <span className="text-gray-400">None detected</span>;
+                      return detectedVars.map(v => (
+                        <span key={v} className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded font-mono text-[11px]">
+                          {`{{${v}}}`}
+                        </span>
+                      ));
                     })()}
                   </div>
                 </div>
@@ -378,19 +388,34 @@ const Templates = () => {
       {/* Modal for Prompt Testing */}
       {testingTemplate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-xl w-full p-6 space-y-5 border border-gray-200 dark:border-gray-700 shadow-xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 border border-gray-200 dark:border-gray-700 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Play className="w-5 h-5 text-indigo-600 fill-current" />
-                Test Prompt: {testingTemplate.name}
+                Test: {testingTemplate.name}
               </h3>
-              <button onClick={() => setTestingTemplate(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => { setTestingTemplate(null); setTestResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             <div className="space-y-4">
+              <div className="bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1">Prompt Variables</p>
+                <p className="text-[11px] text-indigo-600 dark:text-indigo-400">Fill in the variables below. They will replace {'{{variable_name}}'} in the prompt.</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Sample Sender</label>
+                  <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    value={sampleName}
+                    onChange={(e) => setSampleName(e.target.value)}
+                    className="w-full text-xs p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Sender Email</label>
                   <input
                     type="text"
                     value={sampleSender}
@@ -398,19 +423,20 @@ const Templates = () => {
                     className="w-full text-xs p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Sample Subject</label>
-                  <input
-                    type="text"
-                    value={sampleSubject}
-                    onChange={(e) => setSampleSubject(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                  />
-                </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Sample Email Body</label>
+                <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={sampleSubject}
+                  onChange={(e) => setSampleSubject(e.target.value)}
+                  className="w-full text-xs p-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold uppercase text-gray-400 mb-1">Email Body</label>
                 <textarea
                   rows={3}
                   value={sampleBody}
@@ -422,17 +448,55 @@ const Templates = () => {
               <button
                 onClick={handleRunTest}
                 disabled={isTesting}
-                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
-                {isTesting ? 'Generating AI Response...' : '✨ Run Prompt Test & Preview AI Draft'}
+                {isTesting ? (
+                  <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> Generating AI Response...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Run Test & Preview AI Draft</>
+                )}
               </button>
 
               {testResult && (
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-semibold uppercase text-green-600 dark:text-green-400">Generated AI Response Preview</label>
-                  <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl text-xs font-mono text-gray-800 dark:text-gray-200 border border-green-300 dark:border-green-800 whitespace-pre-wrap">
-                    {testResult}
-                  </div>
+                <div className="space-y-3">
+                  {testResult.success ? (
+                    <>
+                      {testResult.execution_time_seconds && (
+                        <div className="flex gap-3 text-[11px] text-gray-500 flex-wrap">
+                          <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">⏱ {testResult.execution_time_seconds}s</span>
+                          <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">🤖 {testResult.model_used || 'AI'}</span>
+                          <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">🔌 {testResult.provider_used || 'Provider'}</span>
+                          <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">📝 v{testResult.template_version || 'draft'}</span>
+                        </div>
+                      )}
+
+                      <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-xl border border-green-200 dark:border-green-800">
+                        <label className="text-[11px] font-bold text-green-700 dark:text-green-400 uppercase tracking-wider flex items-center gap-1 mb-2">
+                          <Check className="w-3.5 h-3.5" /> Generated AI Draft
+                        </label>
+                        <div className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                          {testResult.ai_response}
+                        </div>
+                      </div>
+
+                      <details className="group">
+                        <summary className="text-[11px] font-semibold text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 flex items-center gap-1">
+                          <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span> Rendered Prompt (what was sent to AI)
+                        </summary>
+                        <div className="mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg text-[11px] font-mono text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                          {testResult.rendered_prompt}
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-xl border border-red-200 dark:border-red-800">
+                      <p className="text-xs font-semibold text-red-700 dark:text-red-400">Test Failed</p>
+                      <p className="text-xs text-red-600 dark:text-red-300 mt-1">{testResult.error}</p>
+                      {testResult.missing_variables && (
+                        <p className="text-xs text-red-500 mt-1">Missing: {testResult.missing_variables.join(', ')}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

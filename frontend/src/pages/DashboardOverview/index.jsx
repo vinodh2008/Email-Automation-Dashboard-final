@@ -50,33 +50,33 @@ export const DashboardOverview = () => {
 
       {/* KPI Grid - Only show when connected */}
       {isConnected && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {summaryLoading ? (
-            Array(6).fill(0).map((_, i) => <LoadingSkeleton key={i} type="card" />)
+            Array(8).fill(0).map((_, i) => <LoadingSkeleton key={i} type="card" />)
           ) : summary ? (
             <>
-              <KpiCard label="Total Workflows" value={(summary.total_workflows ?? 0).toLocaleString()} />
-              <KpiCard label="Active Workflows" value={(summary.active_workflows ?? 0).toLocaleString()} trend={{ value: '4%', direction: 'up' }} status="success" />
               <KpiCard label="Emails Processed" value={(summary.emails_processed ?? 0) >= 1000 ? ((summary.emails_processed / 1000).toFixed(1) + 'k') : (summary.emails_processed ?? 0).toLocaleString()} />
-              <KpiCard label="Failed Executions" value={(summary.failed_executions ?? 0).toLocaleString()} trend={{ value: '8%', direction: 'down' }} status="error" />
-              <KpiCard label="Pending Jobs" value={(summary.pending_jobs ?? 0).toLocaleString()} />
+              <KpiCard label="Awaiting Approval" value={(summary.pending_approvals ?? 0).toLocaleString()} status={summary.pending_approvals > 0 ? 'warning' : 'success'} />
+              <KpiCard label="Workflows Active" value={(summary.active_workflows ?? 0).toLocaleString()} />
+              <KpiCard label="AI Success Rate" value={`${summary.ai_success_rate ?? 0}%`} status={summary.ai_success_rate >= 80 ? 'success' : summary.ai_success_rate >= 50 ? 'warning' : 'error'} />
               <KpiCard label="System Health" value={`${summary.system_health_percent ?? 0}%`} status="success" />
+              <KpiCard label="Failed Executions" value={(summary.failed_executions ?? 0).toLocaleString()} status={summary.failed_executions > 0 ? 'error' : 'success'} />
+              <KpiCard label="Sync Errors" value={(summary.total_sync_errors ?? 0).toLocaleString()} status={summary.total_sync_errors > 0 ? 'warning' : 'success'} />
+              <KpiCard label="Pending Jobs" value={(summary.pending_jobs ?? 0).toLocaleString()} />
             </>
           ) : (
-            Array(6).fill(0).map((_, i) => <KpiCard key={i} label="—" value="—" />)
+            Array(8).fill(0).map((_, i) => <KpiCard key={i} label="—" value="—" />)
           )}
         </section>
       )}
 
       {/* Zero-state KPIs when disconnected */}
       {!mailboxLoading && !isConnected && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <KpiCard label="Total Workflows" value="0" />
-          <KpiCard label="Active Workflows" value="0" />
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <KpiCard label="Emails Processed" value="0" />
-          <KpiCard label="Failed Executions" value="0" />
-          <KpiCard label="Pending Jobs" value="0" />
-          <KpiCard label="System Health" value="--" />
+          <KpiCard label="Awaiting Approval" value="0" />
+          <KpiCard label="Workflows Active" value="0" />
+          <KpiCard label="AI Success Rate" value="--" />
         </section>
       )}
 

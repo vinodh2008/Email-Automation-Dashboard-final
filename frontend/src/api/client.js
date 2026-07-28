@@ -440,6 +440,24 @@ export const api = {
     }
   },
 
+  clonePromptTemplate: async (id) => {
+    try {
+      const response = await axiosClient.post(`/prompt-templates/${id}/clone`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getApprovalStats: async () => {
+    try {
+      const response = await axiosClient.get('/ai-approvals/stats');
+      return response || {};
+    } catch (e) {
+      return {};
+    }
+  },
+
   // ---------------------------------------------------------
   // AI Providers
   // ---------------------------------------------------------
@@ -614,11 +632,11 @@ export const api = {
   // --- Roles Management ---
   getRoles: async (params = {}) => {
     try {
-      const response = await axiosClient.get('/admin/roles', { params });
-      return response || { data: [], meta: {} };
+      const response = await axiosClient.get('/admin/roles/', { params });
+      return response || [];
     } catch (e) {
       console.error('Failed to fetch roles:', e);
-      return { data: [], meta: {} };
+      return [];
     }
   },
   createRole: async (payload) => {

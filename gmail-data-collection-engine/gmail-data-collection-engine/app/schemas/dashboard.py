@@ -15,6 +15,9 @@ class DashboardSummaryResponse(BaseModel):
     pending_jobs: int
     system_health_percent: float
     email_volume_series: List[EmailVolumeSeries]
+    pending_approvals: int = 0
+    ai_success_rate: float = 0.0
+    total_sync_errors: int = 0
 
 class RecentActivityItem(BaseModel):
     id: str

@@ -95,14 +95,24 @@ class AIService:
             except Exception as e:
                 logger.warning(f"[AI_SERVICE] Env-var OpenAI failed: {e}")
 
-        # 3. Intelligent Production Draft Fallback
+        # 3. Intelligent Production Draft Fallback with personalized greeting
         logger.info("[AI_SERVICE] All providers failed. Using static fallback draft.")
+        customer_name = "Customer"
+        import re
+        name_match = re.search(r'(?:customer_name|from|sender)[:\s]+([A-Z][a-z]+ [A-Z][a-z]+)', prompt, re.IGNORECASE)
+        if name_match:
+            customer_name = name_match.group(1)
+        else:
+            email_match = re.search(r'([a-zA-Z]+)\.([a-zA-Z]+)@', prompt)
+            if email_match:
+                customer_name = email_match.group(1).capitalize()
+
         return (
-            f"Dear Customer,\n\n"
-            f"Thank you for contacting us. We have received your inquiry regarding:\n"
-            f"\"{prompt[:140]}...\"\n\n"
-            f"Our team is reviewing your request and will follow up with you shortly.\n\n"
-            f"Best regards,\nCustomer Support Team"
+            f"Dear {customer_name},\n\n"
+            f"Thank you for contacting Utservio Support. We have received your inquiry and our team is reviewing it.\n\n"
+            f"We will provide you with an update within 24 hours.\n\n"
+            f"Thank you for your patience.\n\n"
+            f"Best regards,\nUtservio Support Team"
         )
 
     def _call_provider(self, provider, prompt: str, system_context: str) -> Optional[str]:
