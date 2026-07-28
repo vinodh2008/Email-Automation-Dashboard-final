@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Plus, Trash2, Edit2, X, CheckCircle2, AlertTriangle, Users as UsersIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const ALL_PERMISSIONS = [
   'view_users', 'create_users', 'update_users', 'delete_users', 'activate_user', 'deactivate_user', 'reset_password', 'assign_role',
@@ -21,6 +22,7 @@ const Roles = () => {
   const [form, setForm] = useState({ name: '', permissions: [] });
   const [feedback, setFeedback] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const fetchRoles = async () => {
     try {
@@ -63,7 +65,12 @@ const Roles = () => {
   };
 
   const handleDelete = async (roleId) => {
-    if (!confirm('Are you sure you want to delete this role?')) return;
+    setDeleteConfirm(roleId);
+  };
+
+  const confirmDelete = async () => {
+    const roleId = deleteConfirm;
+    setDeleteConfirm(null);
     try {
       await api.deleteRole(roleId);
       setFeedback({ type: 'success', message: 'Role deleted' });
@@ -103,6 +110,15 @@ const Roles = () => {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete Role"
+        message="Are you sure you want to delete this role? Users with this role will lose their assigned permissions."
+        confirmText="Delete"
+        isDestructive
+      />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">

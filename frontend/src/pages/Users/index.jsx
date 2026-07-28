@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Users as UsersIcon, Plus, Trash2, Edit2, Search, Shield, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 const Users = () => {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ const Users = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', role_id: '' });
   const [feedback, setFeedback] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -73,7 +75,12 @@ const Users = () => {
   };
 
   const handleDelete = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    setDeleteConfirm(userId);
+  };
+
+  const confirmDelete = async () => {
+    const userId = deleteConfirm;
+    setDeleteConfirm(null);
     try {
       await api.deleteUser(userId);
       setFeedback({ type: 'success', message: 'User deleted' });
@@ -95,6 +102,15 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Delete"
+        isDestructive
+      />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
