@@ -76,7 +76,6 @@ class WorkflowExecutionService(BaseService):
             execution_logs_json={"actions": action_logs}
         )
         self.execution_repo.create(exec_create)
-        self.db.commit()
 
     def _log_failed_execution(self, email: Email, workflow: Workflow, error_msg: str, stack: str) -> None:
         """Safe logging for failed executions."""
@@ -88,7 +87,6 @@ class WorkflowExecutionService(BaseService):
                 execution_logs_json={"error": error_msg, "stack": stack}
             )
             self.execution_repo.create(exec_create)
-            self.db.commit()
         except Exception as e:
             logger.error(f"[WORKFLOW] Critical error logging execution failure: {e}")
             self.db.rollback()
@@ -135,6 +133,7 @@ class WorkflowExecutionService(BaseService):
             email_val = " ".join([r.get("email", r.get("address", "")) if isinstance(r, dict) else str(r) for r in recipients])
         elif field == "label" or field == "labels": email_val = " ".join(email.labels or [])
         elif field == "body": email_val = (email.body_text or "") + " " + (email.snippet or "")
+        elif field == "category": email_val = email.retention_category or ""
         elif field == "has_attachment": return bool(email.has_attachments) == (str(val).lower() == 'true' or val is True)
         
         if email_val is None:
@@ -212,6 +211,7 @@ class WorkflowExecutionService(BaseService):
                         pt = self.db.query(PromptTemplate).filter(PromptTemplate.id == prompt_template_id).first()
                         if pt and pt.prompt_content:
                             prompt_str = pt.prompt_content
+                            pt.usage_count = (pt.usage_count or 0) + 1
                             
                     context = {
                         "email_sender": email.sender_email or "",

@@ -129,11 +129,11 @@ const ApprovalQueue = () => {
       {isConnected && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Shield className="w-6 h-6 text-amber-500" />
-              AI Draft Approval Management
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Review, edit, and approve AI-generated email responses at scale.</p>
+              AI Draft Approval Queue
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">Review and approve AI-generated email drafts. Email sending will be available in a future release.</p>
           </div>
 
           {selectedIds.length > 0 && (
@@ -303,7 +303,7 @@ const ApprovalQueue = () => {
                         onClick={() => handleApprove(item.id)}
                         className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                       >
-                        <Check className="w-4 h-4" /> Approve & Send
+                        <Check className="w-4 h-4" /> Approve
                       </button>
                     </div>
                   )}

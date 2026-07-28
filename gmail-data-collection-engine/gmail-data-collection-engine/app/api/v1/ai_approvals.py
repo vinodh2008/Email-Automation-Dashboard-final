@@ -9,7 +9,6 @@ from app.models.ai_approval import AIApproval
 from app.models.email import Email
 from app.models.workflow import Workflow
 from app.auth.dependencies import get_current_user
-from app.providers.gmail_provider import GmailProvider
 
 router = APIRouter(prefix="/ai-approvals", tags=["ai-approvals"], dependencies=[Depends(get_current_user)])
 

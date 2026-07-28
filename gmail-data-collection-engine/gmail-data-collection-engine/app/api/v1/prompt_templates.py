@@ -102,6 +102,7 @@ def update_prompt_template(template_id: str, payload: PromptTemplateUpdate, db: 
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         setattr(template, key, value)
+    template.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(template)
     usage_counts = _get_usage_counts([template.id], db)
@@ -124,7 +125,7 @@ def test_prompt_template(template_id: str, payload: PromptTemplateTest, db: Sess
     if not template:
         raise HTTPException(status_code=404, detail="Prompt template not found")
     try:
-        ai_service = AIService()
+        ai_service = AIService(db=db)
         rendered = ai_service.render_prompt(template.prompt_content, payload.sample_inputs)
         response = ai_service.generate_reply(rendered)
         return {"success": True, "rendered_prompt": rendered, "ai_response": response}

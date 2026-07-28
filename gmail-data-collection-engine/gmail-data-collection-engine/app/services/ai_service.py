@@ -46,6 +46,9 @@ class AIService:
         for key, val in context.items():
             placeholder = f"{{{{{key}}}}}"
             rendered = rendered.replace(placeholder, str(val or ""))
+        unreplaced = re.findall(r"\{\{.*?\}\}", rendered)
+        if unreplaced:
+            logger.warning(f"[AI_SERVICE] Unreplaced template variables: {unreplaced}")
         rendered = re.sub(r"\{\{.*?\}\}", "", rendered)
         return rendered.strip()
 

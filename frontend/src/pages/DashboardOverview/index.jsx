@@ -159,7 +159,7 @@ export const DashboardOverview = () => {
             <ActivityTimeline activities={recentActivity?.data} />
           )}
           <div className="px-6 py-3 bg-[#F6F8FA] flex justify-center border-t border-outline-variant">
-            <button className="text-label-bold text-primary hover:underline transition-all">View All Activity History</button>
+            <button onClick={() => navigate('/logs')} className="text-label-bold text-primary hover:underline transition-all">View All Activity History</button>
           </div>
         </section>
       )}
