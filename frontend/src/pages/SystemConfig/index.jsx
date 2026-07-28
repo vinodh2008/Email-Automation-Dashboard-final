@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Settings as SettingsIcon, Shield, Server, Bell, Key, Mail, RefreshCw, CheckCircle2, AlertTriangle, Power, Link2, Activity, Clock, Plus, Trash2, Save, TestTube, Eye, EyeOff, Copy, RotateCcw, Zap, ChevronDown, X, AlertCircle, CopyCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useMailbox } from '../../context/MailboxContext';
@@ -672,10 +672,12 @@ const AITab = ({
             </div>
             <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 flex-wrap">
               {providers.map((p, i) => (
-                <span key={p.id} className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold">
-                  {p.name}
-                </span>
-                {i < providers.length - 1 && <span className="text-blue-400">→</span>}
+                <Fragment key={p.id}>
+                  <span className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold">
+                    {p.name}
+                  </span>
+                  {i < providers.length - 1 && <span className="text-blue-400">→</span>}
+                </Fragment>
               ))}
               <span className="text-blue-400">→</span>
               <span className="bg-white dark:bg-gray-800 px-2 py-1 rounded border border-blue-200 dark:border-blue-700 font-semibold text-gray-500">
