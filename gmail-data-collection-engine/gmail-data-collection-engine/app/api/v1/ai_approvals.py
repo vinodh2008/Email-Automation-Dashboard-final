@@ -31,10 +31,20 @@ class ApprovalItemResponse(BaseModel):
 @router.get("/", response_model=List[ApprovalItemResponse])
 def list_pending_approvals(db: Session = Depends(get_db)):
     approvals = db.query(AIApproval).filter(AIApproval.status == "pending_review").order_by(AIApproval.created_at.desc()).all()
+    
+    if not approvals:
+        return []
+    
+    workflow_ids = list(set(a.workflow_id for a in approvals if a.workflow_id))
+    email_ids = list(set(a.email_id for a in approvals if a.email_id))
+    
+    workflows = {str(w.id): w for w in db.query(Workflow).filter(Workflow.id.in_(workflow_ids)).all()} if workflow_ids else {}
+    emails = {str(e.id): e for e in db.query(Email).filter(Email.id.in_(email_ids)).all()} if email_ids else {}
+    
     results = []
     for a in approvals:
-        wf = db.query(Workflow).filter(Workflow.id == a.workflow_id).first()
-        em = db.query(Email).filter(Email.id == a.email_id).first()
+        wf = workflows.get(str(a.workflow_id))
+        em = emails.get(str(a.email_id))
         results.append(
             ApprovalItemResponse(
                 id=str(a.id),

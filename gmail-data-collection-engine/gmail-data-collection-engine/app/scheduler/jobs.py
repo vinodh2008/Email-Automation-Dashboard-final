@@ -55,12 +55,20 @@ def poll_mailboxes_job():
 
         try:
             workflow_svc = WorkflowExecutionService(db)
-            emails = db.query(Email).all()
+            BATCH_SIZE = 100
             processed_count = 0
-            for email in emails:
-                workflow_svc.process_email(email)
-                processed_count += 1
-            db.commit()
+            offset = 0
+            while True:
+                emails = db.query(Email).offset(offset).limit(BATCH_SIZE).all()
+                if not emails:
+                    break
+                for email in emails:
+                    workflow_svc.process_email(email)
+                    processed_count += 1
+                db.commit()
+                offset += BATCH_SIZE
+                if len(emails) < BATCH_SIZE:
+                    break
             logger.info(f"[SCHEDULER_JOB] Evaluated {processed_count} email(s) against active workflows.")
             log_scheduler_event("info", f"Evaluated {processed_count} email(s) against active workflows", {"processed": processed_count})
         except Exception as wf_err:

@@ -222,9 +222,6 @@ def ensure_full_schema():
     except Exception as e:
         logger.warning(f"Database schema auto-check notice: {e}")
 
-# Automatically synchronize database schema on startup
-ensure_full_schema()
-
 def get_db():
     db = SessionLocal()
     try:

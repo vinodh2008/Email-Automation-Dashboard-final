@@ -58,7 +58,9 @@ class PromptTemplateResponse(BaseModel):
 @router.get("/", response_model=List[PromptTemplateResponse])
 def list_prompt_templates(db: Session = Depends(get_db)):
     templates = db.query(PromptTemplate).filter(PromptTemplate.is_active == True).order_by(PromptTemplate.created_at.desc()).all()
-    return [_to_response(t, db) for t in templates]
+    template_ids = [t.id for t in templates]
+    usage_counts = _get_usage_counts(template_ids, db)
+    return [_to_response(t, db, usage_counts) for t in templates]
 
 
 @router.post("/", response_model=PromptTemplateResponse)
@@ -79,7 +81,8 @@ def create_prompt_template(
     db.add(template)
     db.commit()
     db.refresh(template)
-    return _to_response(template, db)
+    usage_counts = _get_usage_counts([template.id], db)
+    return _to_response(template, db, usage_counts)
 
 
 @router.get("/{template_id}", response_model=PromptTemplateResponse)
@@ -87,7 +90,8 @@ def get_prompt_template(template_id: str, db: Session = Depends(get_db)):
     template = db.query(PromptTemplate).filter(PromptTemplate.id == template_id, PromptTemplate.is_active == True).first()
     if not template:
         raise HTTPException(status_code=404, detail="Prompt template not found")
-    return _to_response(template, db)
+    usage_counts = _get_usage_counts([template.id], db)
+    return _to_response(template, db, usage_counts)
 
 
 @router.put("/{template_id}", response_model=PromptTemplateResponse)
@@ -100,7 +104,8 @@ def update_prompt_template(template_id: str, payload: PromptTemplateUpdate, db: 
         setattr(template, key, value)
     db.commit()
     db.refresh(template)
-    return _to_response(template, db)
+    usage_counts = _get_usage_counts([template.id], db)
+    return _to_response(template, db, usage_counts)
 
 
 @router.delete("/{template_id}")
@@ -124,7 +129,7 @@ def test_prompt_template(template_id: str, payload: PromptTemplateTest, db: Sess
         response = ai_service.generate_reply(rendered)
         return {"success": True, "rendered_prompt": rendered, "ai_response": response}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+        return {"success": False, "error": str(e)}
 
 
 @router.get("/{template_id}/validate")
@@ -154,22 +159,25 @@ def validate_prompt_template(template_id: str, db: Session = Depends(get_db)):
     return {"valid": len(issues) == 0, "issues": issues, "variables_in_prompt": list(variables_in_prompt), "declared_variables": list(declared_vars)}
 
 
-def _get_usage_count(template_id, db):
-    try:
-        import json
-        workflows = db.query(Workflow).filter(Workflow.is_active == True).all()
-        count = 0
-        for wf in workflows:
+def _get_usage_counts(template_ids, db):
+    """Batch compute usage counts for multiple templates in one query."""
+    import json
+    counts = {str(tid): 0 for tid in template_ids}
+    workflows = db.query(Workflow).filter(Workflow.is_active == True).all()
+    for wf in workflows:
+        try:
             actions = wf.actions_json if isinstance(wf.actions_json, list) else json.loads(wf.actions_json or "[]")
             for action in actions:
-                if action.get("type") == "generate_ai_reply" and action.get("prompt_template_id") == str(template_id):
-                    count += 1
-        return count
-    except:
-        return 0
+                if action.get("type") == "generate_ai_reply":
+                    tid = action.get("prompt_template_id")
+                    if tid in counts:
+                        counts[tid] += 1
+        except Exception:
+            continue
+    return counts
 
 
-def _to_response(t, db) -> PromptTemplateResponse:
+def _to_response(t, db, usage_counts=None) -> PromptTemplateResponse:
     return PromptTemplateResponse(
         id=str(t.id),
         name=t.name,
@@ -180,7 +188,7 @@ def _to_response(t, db) -> PromptTemplateResponse:
         status=t.status,
         usage_count=t.usage_count,
         is_active=t.is_active,
-        used_by_workflows=_get_usage_count(t.id, db),
+        used_by_workflows=usage_counts.get(str(t.id), 0) if usage_counts else 0,
         created_at=t.created_at,
         updated_at=t.updated_at,
     )

@@ -9,7 +9,7 @@ from app.scheduler.scheduler_service import scheduler_service
 
 import asyncio
 from sqlalchemy import text
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, ensure_full_schema
 from app.scheduler.jobs import poll_mailboxes_job
 
 logger = logging.getLogger("scheduler_startup")
@@ -46,6 +46,9 @@ async def lifespan(app: FastAPI):
     """
     logger.info("[LIFESPAN] Starting FastAPI application services...")
     try:
+        # 0. Ensure database schema is up to date
+        ensure_full_schema()
+        
         # 1. Clear abandoned locks from crashed runs
         _recover_stale_locks()
         
