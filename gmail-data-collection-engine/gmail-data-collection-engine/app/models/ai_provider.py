@@ -28,6 +28,12 @@ class AIProvider(Base):
     latency_ms = Column(Integer, nullable=True)
     timeout = Column(Integer, nullable=True, server_default=text("30"))
     retry_count = Column(Integer, nullable=True, server_default=text("3"))
+    total_requests = Column(Integer, nullable=False, server_default=text("0"))
+    successful_requests = Column(Integer, nullable=False, server_default=text("0"))
+    failed_requests = Column(Integer, nullable=False, server_default=text("0"))
+    total_tokens_used = Column(Integer, nullable=False, server_default=text("0"))
+    avg_latency_ms = Column(Integer, nullable=True)
+    health_score = Column(Float, nullable=True, server_default=text("100.0"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 

@@ -218,6 +218,68 @@ def ensure_full_schema():
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_system_logs_level ON system_logs(level);"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_system_logs_category ON system_logs(category);"))
 
+            # 11. Enterprise Admin Console: ai_providers monitoring columns
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS total_requests INT NOT NULL DEFAULT 0;"))
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS successful_requests INT NOT NULL DEFAULT 0;"))
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS failed_requests INT NOT NULL DEFAULT 0;"))
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS total_tokens_used BIGINT NOT NULL DEFAULT 0;"))
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS avg_latency_ms INT NULL;"))
+            conn.execute(text("ALTER TABLE ai_providers ADD COLUMN IF NOT EXISTS health_score FLOAT NULL DEFAULT 100.0;"))
+
+            # 12. Enterprise Admin Console: system_settings metadata columns
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS description VARCHAR(500) NULL;"))
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS category VARCHAR(50) NULL DEFAULT 'general';"))
+            conn.execute(text("ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS updated_by UUID NULL REFERENCES users(id) ON DELETE SET NULL;"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_system_settings_category ON system_settings(category);"))
+
+            # 13. Enterprise Admin Console: admin_audit_log table
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS admin_audit_log (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                    user_email VARCHAR(255),
+                    action VARCHAR(100) NOT NULL,
+                    entity_type VARCHAR(50) NOT NULL,
+                    entity_id VARCHAR(100),
+                    old_value JSONB,
+                    new_value JSONB,
+                    ip_address VARCHAR(45),
+                    user_agent VARCHAR(500),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_admin_audit_log_user_id ON admin_audit_log(user_id);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_admin_audit_log_created_at ON admin_audit_log(created_at DESC);"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_admin_audit_log_entity_type ON admin_audit_log(entity_type);"))
+
+            # 14. Seed default company settings if empty
+            conn.execute(text("""
+                INSERT INTO system_settings (key, value_json, description, category)
+                SELECT 'company_settings', '{"company_name":"My Company","support_email":"","default_signature":"Best regards,","default_language":"en","timezone":"UTC","business_hours":{"monday":{"enabled":true,"start":"09:00","end":"17:00"},"tuesday":{"enabled":true,"start":"09:00","end":"17:00"},"wednesday":{"enabled":true,"start":"09:00","end":"17:00"},"thursday":{"enabled":true,"start":"09:00","end":"17:00"},"friday":{"enabled":true,"start":"09:00","end":"17:00"}},"branding":{"logo_url":"","primary_color":"#4F46E5"}}'::jsonb, 'Company profile, branding, and business hours', 'company'
+                WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE key = 'company_settings');
+            """))
+
+            # 15. Seed default AI settings if empty
+            conn.execute(text("""
+                INSERT INTO system_settings (key, value_json, description, category)
+                SELECT 'ai_defaults', '{"default_tone":"professional","creativity_level":0.7,"response_length":"medium","default_language":"en","require_human_approval":true,"max_retry_count":3,"max_tokens":4000,"default_model":"","fallback_enabled":true}'::jsonb, 'Global AI behavior defaults for all workflows', 'ai'
+                WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE key = 'ai_defaults');
+            """))
+
+            # 16. Seed default feature flags if empty
+            conn.execute(text("""
+                INSERT INTO system_settings (key, value_json, description, category)
+                SELECT 'feature_flags', '{"email_summarization":false,"draft_reply_generation":false,"rag_enabled":false,"business_rules_engine":false,"email_sending":false,"auto_approval":false,"advanced_analytics":false,"multi_language_support":false}'::jsonb, 'Platform feature toggles', 'features'
+                WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE key = 'feature_flags');
+            """))
+
+            # 17. Seed default notification settings if empty
+            conn.execute(text("""
+                INSERT INTO system_settings (key, value_json, description, category)
+                SELECT 'notification_settings', '{"provider_failure_alerts":true,"sync_error_alerts":true,"approval_reminders":true,"daily_digest":false,"digest_email":""}'::jsonb, 'System notification preferences', 'notifications'
+                WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE key = 'notification_settings');
+            """))
+
             logger.info("Database full schema verification complete.")
     except Exception as e:
         logger.warning(f"Database schema auto-check notice: {e}")

@@ -663,4 +663,127 @@ export const api = {
       throw e;
     }
   },
+
+  // ---------------------------------------------------------
+  // Enterprise Admin Console — Phase 1
+  // ---------------------------------------------------------
+  getCompanySettings: async () => {
+    try {
+      const response = await axiosClient.get('/company-settings');
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch company settings:', e);
+      return {};
+    }
+  },
+
+  updateCompanySettings: async (payload) => {
+    try {
+      const response = await axiosClient.put('/company-settings', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getAIDefaults: async () => {
+    try {
+      const response = await axiosClient.get('/ai-defaults');
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch AI defaults:', e);
+      return {};
+    }
+  },
+
+  updateAIDefaults: async (payload) => {
+    try {
+      const response = await axiosClient.put('/ai-defaults', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getFeatureFlags: async () => {
+    try {
+      const response = await axiosClient.get('/feature-flags');
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch feature flags:', e);
+      return {};
+    }
+  },
+
+  updateFeatureFlags: async (flags) => {
+    try {
+      const response = await axiosClient.put('/feature-flags', { flags });
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  toggleFeatureFlag: async (flagName, enabled) => {
+    try {
+      const response = await axiosClient.put('/feature-flags/toggle', { flag_name: flagName, enabled });
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getAuditLogs: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.entity_type) queryParams.append('entity_type', params.entity_type);
+      if (params.user_id) queryParams.append('user_id', params.user_id);
+      if (params.limit) queryParams.append('limit', params.limit);
+      if (params.offset) queryParams.append('offset', params.offset);
+      const response = await axiosClient.get(`/audit-log?${queryParams.toString()}`);
+      return response || { items: [], total: 0 };
+    } catch (e) {
+      console.error('Failed to fetch audit logs:', e);
+      return { items: [], total: 0 };
+    }
+  },
+
+  getNotificationSettings: async () => {
+    try {
+      const response = await axiosClient.get('/notification-settings');
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch notification settings:', e);
+      return {};
+    }
+  },
+
+  updateNotificationSettings: async (payload) => {
+    try {
+      const response = await axiosClient.put('/notification-settings', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getAIProvidersHealth: async () => {
+    try {
+      const response = await axiosClient.get('/ai-providers/health');
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch AI providers health:', e);
+      return [];
+    }
+  },
+
+  testAllAIProviders: async () => {
+    try {
+      const response = await axiosClient.post('/ai-providers/test-all');
+      return response || [];
+    } catch (e) {
+      console.error('Failed to test all AI providers:', e);
+      return [];
+    }
+  },
 };
