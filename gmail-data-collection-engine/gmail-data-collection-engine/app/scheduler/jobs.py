@@ -54,27 +54,9 @@ def poll_mailboxes_job():
                 log_sync_event("error", f"Sync failed for {account.account_identifier}: {str(e)}", mailbox_id=str(account.id))
 
         try:
-            workflow_svc = WorkflowExecutionService(db)
-            BATCH_SIZE = 100
-            processed_count = 0
-            offset = 0
-            while True:
-                emails = db.query(Email).offset(offset).limit(BATCH_SIZE).all()
-                if not emails:
-                    break
-                for email in emails:
-                    workflow_svc.process_email(email)
-                    processed_count += 1
-                db.commit()
-                offset += BATCH_SIZE
-                if len(emails) < BATCH_SIZE:
-                    break
-            logger.info(f"[SCHEDULER_JOB] Evaluated {processed_count} email(s) against active workflows.")
-            log_scheduler_event("info", f"Evaluated {processed_count} email(s) against active workflows", {"processed": processed_count})
+            log_scheduler_event("info", "Retroactive workflow execution disabled — using async task queue")
         except Exception as wf_err:
-            logger.error(f"[SCHEDULER_JOB] Failed retroactive workflow execution: {wf_err}")
-            log_scheduler_event("error", f"Retroactive workflow execution failed: {str(wf_err)}")
-            db.rollback()
+            pass
 
     except Exception as e:
         logger.error(f"[SCHEDULER_JOB] Exception in poll_mailboxes_job: {e}")
@@ -203,9 +185,30 @@ def process_task_queue_job():
                                 email.ai_draft_status = "generated"
                                 email.ai_draft_content = result.get("generated_content", "")
                                 db.commit()
+                                
+                                if decision.get("action") == "auto_approve":
+                                    tq.enqueue(
+                                        queue_name="email_sending",
+                                        task_type="send_email",
+                                        entity_type="email",
+                                        entity_id=entity_id,
+                                        payload={
+                                            "email_id": entity_id,
+                                            "approval_id": str(approval.id),
+                                        },
+                                        priority=9,
+                                    )
+                                    logger.info(f"[TASK_QUEUE_JOB] Auto-approved email {entity_id}, enqueued for sending")
                     
                     tq.complete(task_id, result)
                     logger.info(f"[TASK_QUEUE_JOB] AI task completed for email {entity_id}")
+                
+                elif task_type == "send_email":
+                    from app.services.email_sender_service import EmailSenderService
+                    sender = EmailSenderService(db)
+                    result = sender.send_reply(payload.get("approval_id", ""))
+                    tq.complete(task_id, result)
+                    logger.info(f"[TASK_QUEUE_JOB] Send result for email {entity_id}: {result.get('status')}")
                 
                 else:
                     tq.complete(task_id, {"status": "unknown_task_type"})

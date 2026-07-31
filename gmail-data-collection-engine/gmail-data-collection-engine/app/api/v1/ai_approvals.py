@@ -221,3 +221,52 @@ def approve_and_send(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{approval_id}/regenerate")
+def regenerate_draft(
+    approval_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        approval = db.query(AIApproval).filter(AIApproval.id == approval_id).first()
+        if not approval:
+            raise HTTPException(status_code=404, detail="Approval item not found")
+
+        email = db.query(Email).filter(Email.id == approval.email_id).first()
+        if not email:
+            raise HTTPException(status_code=404, detail="Original email not found")
+
+        category_id = str(email.business_category_id) if email.business_category_id else None
+        if not category_id:
+            raise HTTPException(status_code=400, detail="No category assigned to email. Cannot regenerate.")
+
+        from app.services.ai_task_service import AITaskService
+        svc = AITaskService(db)
+        tasks = svc.get_tasks_for_category(category_id)
+        gen_task = next((t for t in tasks if t["task_type"] == "generate_reply"), None)
+
+        if not gen_task:
+            raise HTTPException(status_code=404, detail="No generate_reply task found for category")
+
+        result = svc.execute_task(gen_task["id"], str(approval.email_id))
+        if not result or result.get("status") != "success":
+            raise HTTPException(status_code=400, detail="Regeneration failed")
+
+        approval.generated_content = result.get("generated_content", "")
+        approval.status = "pending_review"
+        approval.reviewed_by = None
+        approval.reviewed_at = None
+        db.commit()
+
+        return success_response(data={
+            "approval_id": approval_id,
+            "new_content": result.get("generated_content", ""),
+            "status": "pending_review",
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
