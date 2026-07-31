@@ -7,7 +7,7 @@ class DecisionRule(Base):
     __tablename__ = "decision_rules"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    business_category_id = Column(UUID(as_uuid=True), ForeignKey("business_categories(id)", ondelete="CASCADE"), nullable=False)
+    business_category_id = Column(UUID(as_uuid=True), ForeignKey("business_categories.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(150), nullable=False)
     description = Column(Text, nullable=True)
     is_enabled = Column(Boolean, nullable=False, server_default=text("true"))

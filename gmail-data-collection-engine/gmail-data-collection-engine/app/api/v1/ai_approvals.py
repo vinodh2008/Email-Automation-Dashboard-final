@@ -48,20 +48,18 @@ def list_pending_approvals(db: Session = Depends(get_db)):
     emails = {str(e.id): e for e in db.query(Email).filter(Email.id.in_(email_ids)).all()} if email_ids else {}
     templates = {str(t.id): t for t in db.query(PromptTemplate).filter(PromptTemplate.id.in_(pt_ids)).all()} if pt_ids else {}
     
+    provider = None
+    try:
+        provider = db.query(AIProvider).filter(AIProvider.is_enabled == True).order_by(AIProvider.priority.desc()).first()
+    except Exception:
+        pass
+    provider_name = f"{provider.name} ({provider.provider_type})" if provider else "AI Provider"
+
     results = []
     for a in approvals:
         wf = workflows.get(str(a.workflow_id))
         em = emails.get(str(a.email_id))
         pt = templates.get(str(a.prompt_template_id)) if a.prompt_template_id else None
-
-        provider_name = "AI Provider"
-        try:
-            if pt:
-                provider = db.query(AIProvider).filter(AIProvider.is_enabled == True).order_by(AIProvider.priority.desc()).first()
-                if provider:
-                    provider_name = f"{provider.name} ({provider.provider_type})"
-        except Exception:
-            pass
 
         email_body = ""
         if em:

@@ -7,8 +7,8 @@ class EmailSend(Base):
     __tablename__ = "email_sends"
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    email_id = Column(UUID(as_uuid=True), ForeignKey("emails(id)", ondelete="CASCADE"), nullable=False)
-    ai_approval_id = Column(UUID(as_uuid=True), ForeignKey("ai_approvals(id)", ondelete="SET NULL"), nullable=True)
+    email_id = Column(UUID(as_uuid=True), ForeignKey("emails.id", ondelete="CASCADE"), nullable=False)
+    ai_approval_id = Column(UUID(as_uuid=True), ForeignKey("ai_approvals.id", ondelete="SET NULL"), nullable=True)
     gmail_message_id = Column(String(100), nullable=True)
     thread_id = Column(String(100), nullable=True)
     status = Column(String(20), nullable=False, server_default=text("'pending'"))

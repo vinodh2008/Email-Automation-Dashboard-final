@@ -439,9 +439,10 @@ def ensure_full_schema():
         # 20. Sprint 6 Phase 2A: Add business_category_id to workflows
         conn.execute(text("ALTER TABLE workflows ADD COLUMN IF NOT EXISTS business_category_id UUID REFERENCES business_categories(id) ON DELETE SET NULL;"))
 
-        # Phase 2B: Task Queue
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS task_queue (
+        # Phase 2B: Each DDL block wrapped in SAVEPOINT for resilience
+        _p2b_ddl = [
+            # Task Queue
+            """CREATE TABLE IF NOT EXISTS task_queue (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 queue_name VARCHAR(50) NOT NULL,
                 task_type VARCHAR(50) NOT NULL,
@@ -457,15 +458,12 @@ def ensure_full_schema():
                 completed_at TIMESTAMPTZ,
                 error_message TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_status_priority ON task_queue(status, priority DESC, scheduled_at);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_queue_name ON task_queue(queue_name, status);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_entity ON task_queue(entity_type, entity_id);"))
-
-        # Phase 2B: AI Tasks
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS ai_tasks (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_tq_status_priority ON task_queue(status, priority DESC, scheduled_at)",
+            "CREATE INDEX IF NOT EXISTS ix_tq_queue_name ON task_queue(queue_name, status)",
+            "CREATE INDEX IF NOT EXISTS ix_tq_entity ON task_queue(entity_type, entity_id)",
+            # AI Tasks
+            """CREATE TABLE IF NOT EXISTS ai_tasks (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
                 task_type VARCHAR(30) NOT NULL,
@@ -481,13 +479,10 @@ def ensure_full_schema():
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 UNIQUE(business_category_id, task_type)
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_at_category ON ai_tasks(business_category_id);"))
-
-        # Phase 2B: Category Channel Configs
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS category_channel_configs (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_at_category ON ai_tasks(business_category_id)",
+            # Category Channel Configs
+            """CREATE TABLE IF NOT EXISTS category_channel_configs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
                 channel VARCHAR(30) NOT NULL,
@@ -498,14 +493,11 @@ def ensure_full_schema():
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 UNIQUE(business_category_id, channel)
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ccc_category ON category_channel_configs(business_category_id);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ccc_channel ON category_channel_configs(channel);"))
-
-        # Phase 2B: Knowledge Sources
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS knowledge_sources (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_ccc_category ON category_channel_configs(business_category_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ccc_channel ON category_channel_configs(channel)",
+            # Knowledge Sources
+            """CREATE TABLE IF NOT EXISTS knowledge_sources (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
                 name VARCHAR(150) NOT NULL,
@@ -522,13 +514,10 @@ def ensure_full_schema():
                 created_by UUID REFERENCES users(id) ON DELETE SET NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ks_category ON knowledge_sources(business_category_id);"))
-
-        # Phase 2B: Decision Rules
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS decision_rules (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_ks_category ON knowledge_sources(business_category_id)",
+            # Decision Rules
+            """CREATE TABLE IF NOT EXISTS decision_rules (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
                 name VARCHAR(150) NOT NULL,
@@ -544,13 +533,10 @@ def ensure_full_schema():
                 approval_chain JSONB DEFAULT '[]',
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_dr_category ON decision_rules(business_category_id);"))
-
-        # Phase 2B: Email Classifications
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS email_classifications (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_dr_category ON decision_rules(business_category_id)",
+            # Email Classifications
+            """CREATE TABLE IF NOT EXISTS email_classifications (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
                 business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE SET NULL,
@@ -559,14 +545,11 @@ def ensure_full_schema():
                 matching_details JSONB DEFAULT '{}',
                 classified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                 classified_by VARCHAR(30) NOT NULL DEFAULT 'system'
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ec_email ON email_classifications(email_id);"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ec_category ON email_classifications(business_category_id);"))
-
-        # Phase 2B: Email Sends
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS email_sends (
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_ec_email ON email_classifications(email_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ec_category ON email_classifications(business_category_id)",
+            # Email Sends
+            """CREATE TABLE IF NOT EXISTS email_sends (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
                 ai_approval_id UUID REFERENCES ai_approvals(id) ON DELETE SET NULL,
@@ -577,28 +560,37 @@ def ensure_full_schema():
                 error_message TEXT,
                 retry_count INT DEFAULT 0,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-        """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_es_email ON email_sends(email_id);"))
-
-        # Phase 2B: Extend emails table
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS business_category_id UUID REFERENCES business_categories(id);"))
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS classification_confidence FLOAT;"))
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_status VARCHAR(20) DEFAULT 'none';"))
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_content TEXT;"))
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS summary TEXT;"))
-        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS extracted_entities JSONB;"))
-
-        # Phase 2B: Extend ai_approvals
-        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS auto_approved BOOLEAN DEFAULT false;"))
-        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS confidence_score FLOAT;"))
-        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS decision_rule_id UUID REFERENCES decision_rules(id);"))
-        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS knowledge_context_used JSONB;"))
-        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS ai_task_id UUID REFERENCES ai_tasks(id);"))
-
-        # Phase 2B: Extend business_categories
-        conn.execute(text("ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20) DEFAULT 'medium';"))
-        conn.execute(text("ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS default_auto_approve BOOLEAN DEFAULT false;"))
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_es_email ON email_sends(email_id)",
+            # Extend emails
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS business_category_id UUID REFERENCES business_categories(id)",
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS classification_confidence FLOAT",
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_status VARCHAR(20) DEFAULT 'none'",
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_content TEXT",
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS summary TEXT",
+            "ALTER TABLE emails ADD COLUMN IF NOT EXISTS extracted_entities JSONB",
+            # Extend ai_approvals
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS auto_approved BOOLEAN DEFAULT false",
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS confidence_score FLOAT",
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS decision_rule_id UUID REFERENCES decision_rules(id)",
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS knowledge_context_used JSONB",
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS ai_task_id UUID REFERENCES ai_tasks(id)",
+            # Extend business_categories
+            "ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20) DEFAULT 'medium'",
+            "ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS default_auto_approve BOOLEAN DEFAULT false",
+        ]
+        for i, ddl in enumerate(_p2b_ddl):
+            sp_name = f"sp_p2b_{i}"
+            try:
+                conn.execute(text(f"SAVEPOINT {sp_name}"))
+                conn.execute(text(ddl))
+                conn.execute(text(f"RELEASE SAVEPOINT {sp_name}"))
+            except Exception as p2b_err:
+                try:
+                    conn.execute(text(f"ROLLBACK TO SAVEPOINT {sp_name}"))
+                except Exception:
+                    pass
+                logger.debug(f"Phase 2B DDL step {i} notice: {p2b_err}")
 
         # 21-26. Seed default settings (parameterized, no SQL injection)
         seed_data = [

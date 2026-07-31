@@ -184,8 +184,13 @@ class CategoryMatcherService:
             )
             self.db.add(classification)
             self.db.flush()
+            self.db.commit()
         except Exception as e:
             logger.error(f"[CATEGORY_MATCHER] Failed to record classification: {e}")
+            try:
+                self.db.rollback()
+            except Exception:
+                pass
 
     def get_classification(self, email_id: str) -> Optional[Dict[str, Any]]:
         """Get existing classification for an email."""

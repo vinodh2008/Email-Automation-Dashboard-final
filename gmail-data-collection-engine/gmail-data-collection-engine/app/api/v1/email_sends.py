@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import List, Optional
 
 from app.db.session import get_db
 from app.auth.dependencies import get_current_user
@@ -25,7 +25,7 @@ def send_reply(approval_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/batch")
-def send_batch(approval_ids: list, db: Session = Depends(get_db)):
+def send_batch(approval_ids: List[str] = Body(...), db: Session = Depends(get_db)):
     try:
         svc = EmailSenderService(db)
         results = svc.send_batch(approval_ids)
