@@ -3,9 +3,15 @@ import { api } from '../../api/client';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActivityTimeline } from '../../components/ActivityTimeline';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
-import { Activity, Clock, Server, Database, Mail, Zap, CheckCircle2, XCircle } from 'lucide-react';
+import { Activity, Clock, Server, Database, Mail, Zap, CheckCircle2, XCircle, ListTodo } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import TaskQueue from './TaskQueue';
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: Activity },
+  { id: 'task-queue', label: 'Task Queue', icon: ListTodo },
+];
 
 export const AutomationActivity = () => {
   const { data: summary, loading: loadingSummary } = useLiveData(api.getOperationsSummary, 30000);
@@ -13,6 +19,7 @@ export const AutomationActivity = () => {
   const { data: historyData, loading: loadingHistory, lastUpdated, error } = useLiveData(api.getAutomationHistory, 10000);
 
   const [timeAgo, setTimeAgo] = useState('just now');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     if (!lastUpdated) return;
@@ -29,6 +36,8 @@ export const AutomationActivity = () => {
   const lastSyncDate = lastSync ? new Date(lastSync.started_at.replace(' ', 'T')) : null;
   const isSchedulerRunning = lastSyncDate && !isNaN(lastSyncDate) && (new Date() - lastSyncDate) < 5 * 60 * 1000;
 
+  const tabBtnCls = (active) => `flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${active ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-high'}`;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex justify-between items-center">
@@ -44,6 +53,16 @@ export const AutomationActivity = () => {
         </div>
       </div>
 
+      <div className="flex gap-1 overflow-x-auto pb-2">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={tabBtnCls(activeTab === tab.id)}>
+            <tab.icon size={16} /> {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && (
+      <>
       {/* Top row: System Health Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Scheduler */}
@@ -158,6 +177,12 @@ export const AutomationActivity = () => {
           )}
         </div>
       </div>
+      </>
+      )}
+
+      {activeTab === 'task-queue' && (
+        <TaskQueue />
+      )}
     </div>
   );
 };

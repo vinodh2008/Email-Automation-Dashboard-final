@@ -13,6 +13,7 @@ import Monitoring from './pages/Monitoring';
 import ApprovalQueue from './pages/ApprovalQueue';
 import Logs from './pages/Logs';
 import BusinessCategories from './pages/BusinessCategories';
+import CategoryWorkspace from './pages/BusinessCategories/CategoryWorkspace';
 import PromptManager from './pages/PromptManager';
 import { AuthProvider } from './context/AuthContext';
 import { RefreshProvider } from './context/RefreshContext';
@@ -47,6 +48,7 @@ function App() {
               <Route path="templates" element={<ErrorBoundary><Templates /></ErrorBoundary>} />
               <Route path="settings" element={<ErrorBoundary><SystemConfig /></ErrorBoundary>} />
               <Route path="business-categories" element={<ErrorBoundary><BusinessCategories /></ErrorBoundary>} />
+              <Route path="business-categories/:id" element={<ErrorBoundary><CategoryWorkspace /></ErrorBoundary>} />
               <Route path="prompt-manager" element={<ErrorBoundary><PromptManager /></ErrorBoundary>} />
               <Route path="system-monitoring" element={<ErrorBoundary><Monitoring /></ErrorBoundary>} />
               <Route path="logs" element={<ErrorBoundary><Logs /></ErrorBoundary>} />

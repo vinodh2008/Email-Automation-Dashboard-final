@@ -19,6 +19,13 @@ from app.models.prompt_template_version import PromptTemplateVersion
 from app.models.prompt_variable import PromptVariable
 from app.models.category_workflow_mapping import CategoryWorkflowMapping
 from app.models.prompt_sandbox_session import PromptSandboxSession
+from app.models.task_queue import TaskQueue
+from app.models.ai_task import AITask
+from app.models.category_channel_config import CategoryChannelConfig
+from app.models.knowledge_source import KnowledgeSource
+from app.models.decision_rule import DecisionRule
+from app.models.email_classification import EmailClassification
+from app.models.email_send import EmailSend
 
 __all__ = [
     "MailboxAccount",
@@ -44,4 +51,11 @@ __all__ = [
     "PromptVariable",
     "CategoryWorkflowMapping",
     "PromptSandboxSession",
+    "TaskQueue",
+    "AITask",
+    "CategoryChannelConfig",
+    "KnowledgeSource",
+    "DecisionRule",
+    "EmailClassification",
+    "EmailSend",
 ]

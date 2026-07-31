@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, text, Index, CheckConstraint, Boolean, ForeignKey
+from sqlalchemy import Column, String, DateTime, Float, Integer, text, Index, CheckConstraint, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.base import Base
@@ -35,6 +35,13 @@ class Email(Base):
     archived_at = Column(DateTime(timezone=True), nullable=True)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     retention_category = Column(String, nullable=True)
+
+    business_category_id = Column(UUID(as_uuid=True), ForeignKey("business_categories(id)", ondelete="SET NULL"), nullable=True)
+    classification_confidence = Column(Float, nullable=True)
+    ai_draft_status = Column(String(20), server_default=text("'none'"))
+    ai_draft_content = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
+    extracted_entities = Column(JSONB, nullable=True)
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

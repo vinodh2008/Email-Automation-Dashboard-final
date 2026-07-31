@@ -42,6 +42,10 @@ class BusinessCategory(Base):
     decision_engine_id = Column(UUID(as_uuid=True), nullable=True)
     approval_flow_id = Column(UUID(as_uuid=True), nullable=True)
 
+    # Phase 2B: Risk & Auto-Approval
+    risk_level = Column(String(20), server_default=text("'medium'"))
+    default_auto_approve = Column(Boolean, server_default=text("false"))
+
     owner = relationship("User", foreign_keys=[owner_user_id])
     creator = relationship("User", foreign_keys=[created_by])
     updater = relationship("User", foreign_keys=[updated_by])

@@ -10,8 +10,13 @@ class PromptBuilderService:
         self.db = db
         self.resolver = VariableResolver(db)
 
-    def build(self, prompt_content: str, variable_values: dict, context: dict = None) -> dict:
+    def build(self, prompt_content: str, variable_values: dict, context: dict = None, knowledge_context: str = None) -> dict:
         resolution = self.resolver.resolve(prompt_content, variable_values, context)
+
+        if knowledge_context:
+            rendered = resolution.get('rendered_prompt', prompt_content)
+            rendered += f"\n\n--- Knowledge Context ---\n{knowledge_context}"
+            resolution['rendered_prompt'] = rendered
 
         return {
             'rendered_prompt': resolution['rendered_prompt'],

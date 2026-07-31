@@ -439,6 +439,167 @@ def ensure_full_schema():
         # 20. Sprint 6 Phase 2A: Add business_category_id to workflows
         conn.execute(text("ALTER TABLE workflows ADD COLUMN IF NOT EXISTS business_category_id UUID REFERENCES business_categories(id) ON DELETE SET NULL;"))
 
+        # Phase 2B: Task Queue
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS task_queue (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                queue_name VARCHAR(50) NOT NULL,
+                task_type VARCHAR(50) NOT NULL,
+                entity_type VARCHAR(50) NOT NULL,
+                entity_id UUID NOT NULL,
+                payload JSONB NOT NULL DEFAULT '{}',
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                priority INT NOT NULL DEFAULT 5,
+                retry_count INT NOT NULL DEFAULT 0,
+                max_retries INT NOT NULL DEFAULT 3,
+                scheduled_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                started_at TIMESTAMPTZ,
+                completed_at TIMESTAMPTZ,
+                error_message TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_status_priority ON task_queue(status, priority DESC, scheduled_at);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_queue_name ON task_queue(queue_name, status);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tq_entity ON task_queue(entity_type, entity_id);"))
+
+        # Phase 2B: AI Tasks
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS ai_tasks (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
+                task_type VARCHAR(30) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                description TEXT,
+                prompt_template_id UUID REFERENCES business_prompt_templates(id) ON DELETE SET NULL,
+                model_override VARCHAR(150),
+                temperature_override FLOAT,
+                max_tokens_override INT,
+                is_enabled BOOLEAN NOT NULL DEFAULT true,
+                execution_order INT NOT NULL DEFAULT 0,
+                config JSONB DEFAULT '{}',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE(business_category_id, task_type)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_at_category ON ai_tasks(business_category_id);"))
+
+        # Phase 2B: Category Channel Configs
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS category_channel_configs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
+                channel VARCHAR(30) NOT NULL,
+                is_enabled BOOLEAN NOT NULL DEFAULT false,
+                workflow_id UUID REFERENCES workflows(id) ON DELETE SET NULL,
+                prompt_template_id UUID REFERENCES business_prompt_templates(id) ON DELETE SET NULL,
+                channel_config JSONB DEFAULT '{}',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE(business_category_id, channel)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ccc_category ON category_channel_configs(business_category_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ccc_channel ON category_channel_configs(channel);"))
+
+        # Phase 2B: Knowledge Sources
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS knowledge_sources (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
+                name VARCHAR(150) NOT NULL,
+                description TEXT,
+                source_type VARCHAR(30) NOT NULL,
+                file_path TEXT,
+                file_size_bytes INT,
+                mime_type VARCHAR(100),
+                content_text TEXT,
+                embedding_status VARCHAR(20) DEFAULT 'pending',
+                embedding_model VARCHAR(50),
+                chunk_count INT DEFAULT 0,
+                is_active BOOLEAN NOT NULL DEFAULT true,
+                created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ks_category ON knowledge_sources(business_category_id);"))
+
+        # Phase 2B: Decision Rules
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS decision_rules (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
+                name VARCHAR(150) NOT NULL,
+                description TEXT,
+                is_enabled BOOLEAN NOT NULL DEFAULT true,
+                priority INT NOT NULL DEFAULT 0,
+                min_confidence FLOAT DEFAULT 0.9,
+                max_risk_level VARCHAR(20) DEFAULT 'low',
+                max_email_value FLOAT,
+                sender_whitelist JSONB DEFAULT '[]',
+                category_codes JSONB DEFAULT '[]',
+                action VARCHAR(30) NOT NULL DEFAULT 'escalate',
+                approval_chain JSONB DEFAULT '[]',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_dr_category ON decision_rules(business_category_id);"))
+
+        # Phase 2B: Email Classifications
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_classifications (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE SET NULL,
+                confidence FLOAT NOT NULL,
+                matching_method VARCHAR(30) NOT NULL,
+                matching_details JSONB DEFAULT '{}',
+                classified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                classified_by VARCHAR(30) NOT NULL DEFAULT 'system'
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ec_email ON email_classifications(email_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_ec_category ON email_classifications(business_category_id);"))
+
+        # Phase 2B: Email Sends
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_sends (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+                ai_approval_id UUID REFERENCES ai_approvals(id) ON DELETE SET NULL,
+                gmail_message_id VARCHAR(100),
+                thread_id VARCHAR(100),
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                sent_at TIMESTAMPTZ,
+                error_message TEXT,
+                retry_count INT DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_es_email ON email_sends(email_id);"))
+
+        # Phase 2B: Extend emails table
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS business_category_id UUID REFERENCES business_categories(id);"))
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS classification_confidence FLOAT;"))
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_status VARCHAR(20) DEFAULT 'none';"))
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS ai_draft_content TEXT;"))
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS summary TEXT;"))
+        conn.execute(text("ALTER TABLE emails ADD COLUMN IF NOT EXISTS extracted_entities JSONB;"))
+
+        # Phase 2B: Extend ai_approvals
+        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS auto_approved BOOLEAN DEFAULT false;"))
+        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS confidence_score FLOAT;"))
+        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS decision_rule_id UUID REFERENCES decision_rules(id);"))
+        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS knowledge_context_used JSONB;"))
+        conn.execute(text("ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS ai_task_id UUID REFERENCES ai_tasks(id);"))
+
+        # Phase 2B: Extend business_categories
+        conn.execute(text("ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20) DEFAULT 'medium';"))
+        conn.execute(text("ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS default_auto_approve BOOLEAN DEFAULT false;"))
+
         # 21-26. Seed default settings (parameterized, no SQL injection)
         seed_data = [
             ("company_settings", '{"company_name":"My Company","support_email":"","default_signature":"Best regards,","default_language":"en","timezone":"UTC","business_hours":{"monday":{"enabled":true,"start":"09:00","end":"17:00"},"tuesday":{"enabled":true,"start":"09:00","end":"17:00"},"wednesday":{"enabled":true,"start":"09:00","end":"17:00"},"thursday":{"enabled":true,"start":"09:00","end":"17:00"},"friday":{"enabled":true,"start":"09:00","end":"17:00"}},"branding":{"logo_url":"","primary_color":"#4F46E5"}}', "Company profile, branding, and business hours", "company"),

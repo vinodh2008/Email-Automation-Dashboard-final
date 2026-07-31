@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR, EVENT_JOB_MISSED, EVENT_JOB_MAX_INSTANCES
 from app.config import settings
-from app.scheduler.jobs import poll_mailboxes_job
+from app.scheduler.jobs import poll_mailboxes_job, process_task_queue_job
 
 logger = logging.getLogger("scheduler_service")
 
@@ -72,6 +72,21 @@ class SchedulerService:
                 replace_existing=True
             )
             logger.info(f"[SCHEDULER_SERVICE] Registered job '{job_id}' every {settings.sync_interval_minutes} minute(s).")
+
+        # Register task queue processor job
+        task_job_id = "task_queue_processor"
+        if not self.scheduler.get_job(task_job_id):
+            self.scheduler.add_job(
+                process_task_queue_job,
+                'interval',
+                seconds=5,
+                id=task_job_id,
+                max_instances=1,
+                coalesce=True,
+                misfire_grace_time=10,
+                replace_existing=True
+            )
+            logger.info(f"[SCHEDULER_SERVICE] Registered job '{task_job_id}' every 5 seconds.")
 
         self.scheduler.start()
         logger.info("[SCHEDULER_SERVICE] APScheduler started successfully.")

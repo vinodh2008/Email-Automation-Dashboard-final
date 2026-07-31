@@ -255,12 +255,26 @@ class SyncOrchestrator:
                             
                         self.db.commit()
                         
-                        # --- Step 6.5: Workflow Execution Engine ---
+                        # --- Step 6.5: Enqueue Email for Async Processing ---
                         if inserted:
                             try:
-                                self.workflow_execution_service.process_email(email_obj)
-                            except Exception as we_err:
-                                logger.error(f"[WORKFLOW_ENGINE] Critical error processing email {msg_id}: {we_err}")
+                                from app.services.task_queue_service import TaskQueueService
+                                task_queue = TaskQueueService(self.db)
+                                task_queue.enqueue(
+                                    queue_name="email_processing",
+                                    task_type="classify",
+                                    entity_type="email",
+                                    entity_id=str(email_obj.id),
+                                    payload={
+                                        "email_id": str(email_obj.id),
+                                        "account_id": account_id,
+                                        "mailbox_account_id": account_id,
+                                    },
+                                    priority=5,
+                                )
+                                logger.info(f"[TASK_QUEUE] Enqueued email {msg_id} for async classification")
+                            except Exception as tq_err:
+                                logger.error(f"[TASK_QUEUE] Failed to enqueue email {msg_id}: {tq_err}")
                     except HttpError as e:
                         if e.resp.status == 404:
                             self.db.rollback()

@@ -1164,4 +1164,243 @@ export const api = {
       return { variables: [] };
     }
   },
+
+  // --- Phase 2B: Task Queue ---
+  getTaskQueueStats: async () => {
+    try {
+      const response = await axiosClient.get('/task-queue/stats');
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch task queue stats:', e);
+      return {};
+    }
+  },
+  getPendingTasks: async (limit = 50) => {
+    try {
+      const response = await axiosClient.get('/task-queue/pending', { params: { limit } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch pending tasks:', e);
+      return [];
+    }
+  },
+  retryTask: async (taskId) => {
+    try {
+      const response = await axiosClient.post(`/task-queue/retry/${taskId}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  cancelTask: async (taskId) => {
+    try {
+      const response = await axiosClient.delete(`/task-queue/${taskId}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // --- Phase 2B: AI Tasks ---
+  getAITasks: async (categoryId) => {
+    try {
+      const response = await axiosClient.get('/ai-tasks', { params: { category_id: categoryId } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch AI tasks:', e);
+      return [];
+    }
+  },
+  createAITask: async (data) => {
+    try {
+      const response = await axiosClient.post('/ai-tasks', data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  updateAITask: async (id, data) => {
+    try {
+      const response = await axiosClient.put(`/ai-tasks/${id}`, data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  deleteAITask: async (id) => {
+    try {
+      const response = await axiosClient.delete(`/ai-tasks/${id}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  testAITask: async (id, emailId) => {
+    try {
+      const response = await axiosClient.post(`/ai-tasks/${id}/test`, null, { params: { email_id: emailId } });
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // --- Phase 2B: Category Channels ---
+  getCategoryChannels: async (categoryId) => {
+    try {
+      const response = await axiosClient.get('/category-channels', { params: { category_id: categoryId } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch category channels:', e);
+      return [];
+    }
+  },
+  createCategoryChannel: async (data) => {
+    try {
+      const response = await axiosClient.post('/category-channels', data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  updateCategoryChannel: async (id, data) => {
+    try {
+      const response = await axiosClient.put(`/category-channels/${id}`, data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  deleteCategoryChannel: async (id) => {
+    try {
+      const response = await axiosClient.delete(`/category-channels/${id}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // --- Phase 2B: Knowledge Sources ---
+  getKnowledgeSources: async (categoryId) => {
+    try {
+      const response = await axiosClient.get('/knowledge-sources', { params: { category_id: categoryId } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch knowledge sources:', e);
+      return [];
+    }
+  },
+  createKnowledgeSource: async (data) => {
+    try {
+      const response = await axiosClient.post('/knowledge-sources', data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  deleteKnowledgeSource: async (id) => {
+    try {
+      const response = await axiosClient.delete(`/knowledge-sources/${id}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  indexKnowledgeSource: async (id) => {
+    try {
+      const response = await axiosClient.post(`/knowledge-sources/${id}/index`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  searchKnowledge: async (categoryId, query, limit = 3) => {
+    try {
+      const response = await axiosClient.post('/knowledge-sources/search', null, { params: { category_id: categoryId, query, limit } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to search knowledge:', e);
+      return [];
+    }
+  },
+
+  // --- Phase 2B: Decision Rules ---
+  getDecisionRules: async (categoryId) => {
+    try {
+      const response = await axiosClient.get('/decision-rules', { params: { category_id: categoryId } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch decision rules:', e);
+      return [];
+    }
+  },
+  createDecisionRule: async (data) => {
+    try {
+      const response = await axiosClient.post('/decision-rules', data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  updateDecisionRule: async (id, data) => {
+    try {
+      const response = await axiosClient.put(`/decision-rules/${id}`, data);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  deleteDecisionRule: async (id) => {
+    try {
+      const response = await axiosClient.delete(`/decision-rules/${id}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // --- Phase 2B: Email Classifications ---
+  getEmailClassification: async (emailId) => {
+    try {
+      const response = await axiosClient.get('/email-classifications', { params: { email_id: emailId } });
+      return response || null;
+    } catch (e) {
+      console.error('Failed to fetch email classification:', e);
+      return null;
+    }
+  },
+  reclassifyEmail: async (emailId) => {
+    try {
+      const response = await axiosClient.post(`/email-classifications/reclassify/${emailId}`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // --- Phase 2B: Email Sends ---
+  sendEmailReply: async (approvalId) => {
+    try {
+      const response = await axiosClient.post(`/email-sends/${approvalId}/send`);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  sendBatchEmails: async (approvalIds) => {
+    try {
+      const response = await axiosClient.post('/email-sends/batch', approvalIds);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+  getEmailSendHistory: async (emailId) => {
+    try {
+      const response = await axiosClient.get('/email-sends', { params: { email_id: emailId } });
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch email send history:', e);
+      return [];
+    }
+  },
 };
