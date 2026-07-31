@@ -234,3 +234,27 @@ class TaskQueueService:
             self.db.rollback()
             logger.error(f"[TASK_QUEUE] Failed to cleanup: {e}")
             return 0
+
+    def get_dead_letters(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """List dead-letter tasks."""
+        try:
+            from app.models.task_queue import TaskQueue
+            tasks = self.db.query(TaskQueue).filter(
+                TaskQueue.status == "dead_letter"
+            ).order_by(TaskQueue.created_at.desc()).limit(limit).all()
+
+            return [{
+                "id": str(t.id),
+                "queue_name": t.queue_name,
+                "task_type": t.task_type,
+                "entity_type": t.entity_type,
+                "entity_id": str(t.entity_id),
+                "payload": t.payload or {},
+                "retry_count": t.retry_count,
+                "error_message": t.error_message,
+                "error_traceback": t.error_traceback,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            } for t in tasks]
+        except Exception as e:
+            logger.error(f"[TASK_QUEUE] Failed to get dead letters: {e}")
+            return []

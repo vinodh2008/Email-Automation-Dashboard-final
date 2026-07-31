@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Index, text, UniqueConstraint
+from sqlalchemy import Column, String, Boolean, DateTime, Float, ForeignKey, Index, text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from app.db.base import Base
@@ -12,6 +12,8 @@ class CategoryChannelConfig(Base):
     is_enabled = Column(Boolean, nullable=False, server_default=text("false"))
     workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="SET NULL"), nullable=True)
     prompt_template_id = Column(UUID(as_uuid=True), ForeignKey("business_prompt_templates.id", ondelete="SET NULL"), nullable=True)
+    ai_model_override = Column(String(150), nullable=True)
+    ai_temperature_override = Column(Float, nullable=True)
     channel_config = Column(JSONB, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

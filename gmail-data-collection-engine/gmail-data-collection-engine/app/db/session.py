@@ -578,6 +578,49 @@ def ensure_full_schema():
             # Extend business_categories
             "ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS risk_level VARCHAR(20) DEFAULT 'medium'",
             "ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS default_auto_approve BOOLEAN DEFAULT false",
+            "ALTER TABLE business_categories ADD COLUMN IF NOT EXISTS matching_strategy VARCHAR(50) DEFAULT 'rule_based'",
+            # Extend task_queue
+            "ALTER TABLE task_queue ADD COLUMN IF NOT EXISTS error_traceback TEXT",
+            "ALTER TABLE task_queue ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()",
+            # Extend category_channel_configs
+            "ALTER TABLE category_channel_configs ADD COLUMN IF NOT EXISTS ai_model_override VARCHAR(150)",
+            "ALTER TABLE category_channel_configs ADD COLUMN IF NOT EXISTS ai_temperature_override FLOAT",
+            # Extend ai_tasks
+            "ALTER TABLE ai_tasks ADD COLUMN IF NOT EXISTS timeout_seconds INT DEFAULT 30",
+            "ALTER TABLE ai_tasks ADD COLUMN IF NOT EXISTS max_retries INT DEFAULT 3",
+            # Extend ai_approvals
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS decision_service_output JSONB",
+            "ALTER TABLE ai_approvals ADD COLUMN IF NOT EXISTS needs_escalation BOOLEAN DEFAULT false",
+            # AI Task Executions table
+            """CREATE TABLE IF NOT EXISTS ai_task_executions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                ai_task_id UUID NOT NULL REFERENCES ai_tasks(id) ON DELETE CASCADE,
+                email_id UUID NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+                task_type VARCHAR(30) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                input_payload JSONB,
+                output_payload JSONB,
+                model_used VARCHAR(150),
+                tokens_used INT,
+                execution_time_ms INT,
+                error_message TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_ate_ai_task ON ai_task_executions(ai_task_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ate_email ON ai_task_executions(email_id)",
+            "CREATE INDEX IF NOT EXISTS ix_ate_status ON ai_task_executions(status)",
+            # Category AI Task Mappings table
+            """CREATE TABLE IF NOT EXISTS category_ai_task_mappings (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL REFERENCES business_categories(id) ON DELETE CASCADE,
+                ai_task_id UUID NOT NULL REFERENCES ai_tasks(id) ON DELETE CASCADE,
+                task_order INT NOT NULL DEFAULT 0,
+                is_enabled BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE(business_category_id, ai_task_id)
+            )""",
+            "CREATE INDEX IF NOT EXISTS ix_cam_category ON category_ai_task_mappings(business_category_id)",
+            "CREATE INDEX IF NOT EXISTS ix_cam_ai_task ON category_ai_task_mappings(ai_task_id)",
         ]
         for i, ddl in enumerate(_p2b_ddl):
             sp_name = f"sp_p2b_{i}"

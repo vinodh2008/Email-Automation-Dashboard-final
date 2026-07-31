@@ -17,6 +17,8 @@ class AITask(Base):
     max_tokens_override = Column(Integer, nullable=True)
     is_enabled = Column(Boolean, nullable=False, server_default=text("true"))
     execution_order = Column(Integer, nullable=False, server_default=text("0"))
+    timeout_seconds = Column(Integer, nullable=True, server_default=text("30"))
+    max_retries = Column(Integer, nullable=True, server_default=text("3"))
     config = Column(JSONB, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

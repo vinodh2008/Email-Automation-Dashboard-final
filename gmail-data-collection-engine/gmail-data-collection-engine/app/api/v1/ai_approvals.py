@@ -11,6 +11,7 @@ from app.models.workflow import Workflow
 from app.models.prompt_template import PromptTemplate
 from app.models.ai_provider import AIProvider
 from app.auth.dependencies import get_current_user
+from app.core.responses import success_response
 
 router = APIRouter(prefix="/ai-approvals", tags=["ai-approvals"], dependencies=[Depends(get_current_user)])
 
@@ -129,3 +130,94 @@ def reject_ai_draft(
     
     db.commit()
     return {"success": True, "message": "Draft Rejected", "status": "rejected"}
+
+
+@router.post("/{approval_id}/decide")
+def decide_approval(approval_id: str, db: Session = Depends(get_db)):
+    try:
+        from app.services.decision_service import DecisionService
+        approval = db.query(AIApproval).filter(AIApproval.id == approval_id).first()
+        if not approval:
+            raise HTTPException(status_code=404, detail="Approval item not found")
+
+        email = db.query(Email).filter(Email.id == approval.email_id).first()
+        category_id = str(email.business_category_id) if email and email.business_category_id else None
+
+        if not category_id:
+            try:
+                from app.models.workflow import Workflow
+                wf = db.query(Workflow).filter(Workflow.id == approval.workflow_id).first()
+                if wf and hasattr(wf, 'business_category_id') and wf.business_category_id:
+                    category_id = str(wf.business_category_id)
+            except Exception:
+                pass
+
+        if not category_id:
+            from app.models.business_category import BusinessCategory
+            default_cat = db.query(BusinessCategory).filter(
+                BusinessCategory.is_default == True
+            ).first()
+            if default_cat:
+                category_id = str(default_cat.id)
+
+        if not category_id:
+            raise HTTPException(status_code=400, detail="No category found for decision. Assign a category to the email first.")
+
+        ai_output = {
+            "confidence": approval.confidence_score or 0.0,
+            "risk_level": "medium",
+            "email_value": 0,
+            "sender_email": email.sender_email if email else "",
+        }
+
+        svc = DecisionService(db)
+        decision = svc.decide(approval.email_id, ai_output, category_id)
+
+        import json
+        approval.decision_service_output = json.dumps(decision) if isinstance(decision, dict) else decision
+        approval.needs_escalation = decision.get("action") == "escalate"
+        db.commit()
+
+        return success_response(data=decision)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{approval_id}/send")
+def approve_and_send(
+    approval_id: str,
+    edited_text: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        approval = db.query(AIApproval).filter(AIApproval.id == approval_id).first()
+        if not approval:
+            raise HTTPException(status_code=404, detail="Approval item not found")
+
+        approval.status = "approved"
+        if edited_text:
+            approval.edited_content = edited_text
+        approval.reviewed_by = current_user.get("id")
+        approval.reviewed_at = datetime.now(timezone.utc)
+        db.flush()
+
+        from app.services.email_sender_service import EmailSenderService
+        svc = EmailSenderService(db)
+        result = svc.send_reply(approval_id)
+        if result.get("status") == "error":
+            raise HTTPException(status_code=400, detail=result.get("error", "Send failed"))
+
+        db.commit()
+        return success_response(data={
+            "approval_status": "approved",
+            "email_sent": True,
+            "gmail_message_id": result.get("gmail_message_id"),
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))

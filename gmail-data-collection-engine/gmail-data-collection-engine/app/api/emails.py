@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session, load_only
 from typing import List
 from app.db.session import get_db
@@ -17,6 +17,7 @@ from datetime import datetime
 
 from app.auth.dependencies import get_current_user
 from app.models.mailbox_account import MailboxAccount
+from app.core.responses import success_response
 
 logger = logging.getLogger(__name__)
 
@@ -258,3 +259,54 @@ def get_email_detail(email_id: str, db: Session = Depends(get_db)):
             
     detail.execution_timeline = timeline
     return detail
+
+
+@router.post("/{email_id}/classify")
+def classify_email(email_id: str, db: Session = Depends(get_db)):
+    try:
+        import uuid
+        uuid.UUID(email_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid email ID format")
+
+    try:
+        from app.services.category_matcher_service import CategoryMatcherService
+        svc = CategoryMatcherService(db)
+        result = svc.classify(email_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Email not found or classification failed")
+        return success_response(data=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{email_id}/send")
+def send_email_reply(email_id: str, db: Session = Depends(get_db)):
+    try:
+        import uuid
+        uuid.UUID(email_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid email ID format")
+
+    try:
+        from app.models.ai_approval import AIApproval
+        approval = db.query(AIApproval).filter(
+            AIApproval.email_id == email_id,
+            AIApproval.status == "approved"
+        ).order_by(AIApproval.created_at.desc()).first()
+
+        if not approval:
+            raise HTTPException(status_code=404, detail="No approved draft found for this email")
+
+        from app.services.email_sender_service import EmailSenderService
+        svc = EmailSenderService(db)
+        result = svc.send_reply(str(approval.id))
+        if result.get("status") == "error":
+            raise HTTPException(status_code=400, detail=result.get("error", "Send failed"))
+        return success_response(data=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

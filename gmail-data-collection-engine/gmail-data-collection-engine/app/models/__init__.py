@@ -26,6 +26,8 @@ from app.models.knowledge_source import KnowledgeSource
 from app.models.decision_rule import DecisionRule
 from app.models.email_classification import EmailClassification
 from app.models.email_send import EmailSend
+from app.models.ai_task_execution import AITaskExecution
+from app.models.category_ai_task_mapping import CategoryAITaskMapping
 
 __all__ = [
     "MailboxAccount",
@@ -58,4 +60,6 @@ __all__ = [
     "DecisionRule",
     "EmailClassification",
     "EmailSend",
+    "AITaskExecution",
+    "CategoryAITaskMapping",
 ]

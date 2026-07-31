@@ -13,6 +13,7 @@ class Workflow(Base):
     trigger_conditions_json = Column(JSONB, nullable=False)
     actions_json = Column(JSONB, nullable=False)
     is_active = Column(Boolean, nullable=False, server_default=text("true"))
+    business_category_id = Column(UUID(as_uuid=True), ForeignKey("business_categories.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 

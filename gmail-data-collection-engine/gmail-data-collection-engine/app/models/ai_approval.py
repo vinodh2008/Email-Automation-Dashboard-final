@@ -20,6 +20,8 @@ class AIApproval(Base):
     decision_rule_id = Column(UUID(as_uuid=True), ForeignKey("decision_rules.id", ondelete="SET NULL"), nullable=True)
     knowledge_context_used = Column(JSONB, nullable=True)
     ai_task_id = Column(UUID(as_uuid=True), ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
+    decision_service_output = Column(JSONB, nullable=True)
+    needs_escalation = Column(Boolean, server_default=text("false"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
 
     workflow = relationship("Workflow")

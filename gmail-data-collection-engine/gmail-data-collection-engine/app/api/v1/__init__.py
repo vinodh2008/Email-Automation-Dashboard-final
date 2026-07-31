@@ -32,6 +32,7 @@ from app.api.v1.knowledge_sources import router as knowledge_sources_router
 from app.api.v1.decision_rules import router as decision_rules_router
 from app.api.v1.email_classifications import router as email_classifications_router
 from app.api.v1.email_sends import router as email_sends_router
+from app.api.v1.category_pipeline import router as category_pipeline_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(dashboard_router)
@@ -67,3 +68,4 @@ api_v1_router.include_router(knowledge_sources_router)
 api_v1_router.include_router(decision_rules_router)
 api_v1_router.include_router(email_classifications_router)
 api_v1_router.include_router(email_sends_router)
+api_v1_router.include_router(category_pipeline_router)
