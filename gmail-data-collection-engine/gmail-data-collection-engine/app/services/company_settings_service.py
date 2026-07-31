@@ -1,5 +1,7 @@
+import json
 import logging
 from typing import Optional
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.models.system_settings import SystemSetting
 
@@ -58,13 +60,11 @@ class CompanySettingsService:
         return dict(setting.value_json)
 
     def _seed(self):
-        existing = self.db.query(SystemSetting).filter(SystemSetting.key == "company_settings").first()
-        if not existing:
-            setting = SystemSetting(
-                key="company_settings",
-                value_json=DEFAULT_COMPANY,
-                description="Company profile, branding, and business hours",
-                category="company",
-            )
-            self.db.add(setting)
-            self.db.commit()
+        self.db.execute(
+            text("INSERT INTO system_settings (key, value_json, description, category) "
+                 "VALUES (:key, CAST(:val AS jsonb), :desc, :cat) "
+                 "ON CONFLICT (key) DO NOTHING"),
+            {"key": "company_settings", "val": json.dumps(DEFAULT_COMPANY),
+             "desc": "Company profile, branding, and business hours", "cat": "company"}
+        )
+        self.db.commit()

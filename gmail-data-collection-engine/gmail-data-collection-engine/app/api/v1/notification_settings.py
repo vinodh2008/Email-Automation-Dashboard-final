@@ -1,7 +1,8 @@
+import re
 import logging
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 
 from app.db.session import get_db
@@ -13,6 +14,8 @@ from app.core.responses import success_response
 logger = logging.getLogger("notification_settings")
 
 router = APIRouter(prefix="/notification-settings", tags=["notification-settings"], dependencies=[Depends(get_current_user)])
+
+EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 
 
 DEFAULT_NOTIFICATIONS = {
@@ -30,6 +33,13 @@ class NotificationSettingsUpdate(BaseModel):
     approval_reminders: Optional[bool] = None
     daily_digest: Optional[bool] = None
     digest_email: Optional[str] = None
+
+    @field_validator('digest_email')
+    @classmethod
+    def validate_digest_email(cls, v):
+        if v is not None and v != '' and not EMAIL_RE.match(v):
+            raise ValueError('Invalid email format for digest email')
+        return v
 
 
 def _get_notifications(db: Session) -> dict:
@@ -80,5 +90,7 @@ def update_notification_settings(
         user_id=current_user.get("id"),
         user_email=current_user.get("email"),
         ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
+    db.commit()
     return success_response(data=merged)

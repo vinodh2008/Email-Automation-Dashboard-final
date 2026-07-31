@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 
 from app.db.session import get_db
@@ -10,6 +10,9 @@ from app.services.admin_audit_service import AdminAuditService
 from app.core.responses import success_response
 
 router = APIRouter(prefix="/ai-defaults", tags=["ai-defaults"], dependencies=[Depends(get_current_user)])
+
+VALID_TONES = {'professional', 'friendly', 'formal', 'casual', 'empathetic', 'direct', 'technical'}
+VALID_LENGTHS = {'concise', 'medium', 'detailed', 'comprehensive'}
 
 
 class AIDefaultsUpdate(BaseModel):
@@ -22,6 +25,41 @@ class AIDefaultsUpdate(BaseModel):
     max_tokens: Optional[int] = None
     default_model: Optional[str] = None
     fallback_enabled: Optional[bool] = None
+
+    @field_validator('default_tone')
+    @classmethod
+    def validate_tone(cls, v):
+        if v is not None and v not in VALID_TONES:
+            raise ValueError(f'Invalid tone. Must be one of: {", ".join(sorted(VALID_TONES))}')
+        return v
+
+    @field_validator('creativity_level')
+    @classmethod
+    def validate_creativity(cls, v):
+        if v is not None and (v < 0.0 or v > 1.0):
+            raise ValueError('Creativity level must be between 0.0 and 1.0')
+        return v
+
+    @field_validator('response_length')
+    @classmethod
+    def validate_length(cls, v):
+        if v is not None and v not in VALID_LENGTHS:
+            raise ValueError(f'Invalid response length. Must be one of: {", ".join(sorted(VALID_LENGTHS))}')
+        return v
+
+    @field_validator('max_retry_count')
+    @classmethod
+    def validate_retry(cls, v):
+        if v is not None and (v < 0 or v > 10):
+            raise ValueError('Max retry count must be between 0 and 10')
+        return v
+
+    @field_validator('max_tokens')
+    @classmethod
+    def validate_tokens(cls, v):
+        if v is not None and (v < 100 or v > 128000):
+            raise ValueError('Max tokens must be between 100 and 128000')
+        return v
 
 
 @router.get("/")
@@ -51,5 +89,7 @@ def update_ai_defaults(
         user_id=current_user.get("id"),
         user_email=current_user.get("email"),
         ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
+    db.commit()
     return success_response(data=new_data)

@@ -1,5 +1,7 @@
+import json
 import logging
 from typing import Optional
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.models.system_settings import SystemSetting
 
@@ -61,13 +63,11 @@ class FeatureFlagsService:
         return self.update_all(current, user_id)
 
     def _seed(self):
-        existing = self.db.query(SystemSetting).filter(SystemSetting.key == "feature_flags").first()
-        if not existing:
-            setting = SystemSetting(
-                key="feature_flags",
-                value_json=DEFAULT_FLAGS,
-                description="Platform feature toggles",
-                category="features",
-            )
-            self.db.add(setting)
-            self.db.commit()
+        self.db.execute(
+            text("INSERT INTO system_settings (key, value_json, description, category) "
+                 "VALUES (:key, CAST(:val AS jsonb), :desc, :cat) "
+                 "ON CONFLICT (key) DO NOTHING"),
+            {"key": "feature_flags", "val": json.dumps(DEFAULT_FLAGS),
+             "desc": "Platform feature toggles", "cat": "features"}
+        )
+        self.db.commit()

@@ -12,6 +12,8 @@ import SystemConfig from './pages/SystemConfig';
 import Monitoring from './pages/Monitoring';
 import ApprovalQueue from './pages/ApprovalQueue';
 import Logs from './pages/Logs';
+import BusinessCategories from './pages/BusinessCategories';
+import PromptManager from './pages/PromptManager';
 import { AuthProvider } from './context/AuthContext';
 import { RefreshProvider } from './context/RefreshContext';
 import { MailboxProvider } from './context/MailboxContext';
@@ -44,6 +46,8 @@ function App() {
               <Route path="roles" element={<ErrorBoundary><Roles /></ErrorBoundary>} />
               <Route path="templates" element={<ErrorBoundary><Templates /></ErrorBoundary>} />
               <Route path="settings" element={<ErrorBoundary><SystemConfig /></ErrorBoundary>} />
+              <Route path="business-categories" element={<ErrorBoundary><BusinessCategories /></ErrorBoundary>} />
+              <Route path="prompt-manager" element={<ErrorBoundary><PromptManager /></ErrorBoundary>} />
               <Route path="system-monitoring" element={<ErrorBoundary><Monitoring /></ErrorBoundary>} />
               <Route path="logs" element={<ErrorBoundary><Logs /></ErrorBoundary>} />
               <Route path="automation/logs" element={<Navigate to="/logs" replace />} />

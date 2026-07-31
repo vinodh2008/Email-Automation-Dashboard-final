@@ -48,7 +48,9 @@ def update_feature_flags(
         user_id=current_user.get("id"),
         user_email=current_user.get("email"),
         ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
+    db.commit()
     return success_response(data=new_data)
 
 
@@ -75,5 +77,7 @@ def toggle_feature_flag(
         user_id=current_user.get("id"),
         user_email=current_user.get("email"),
         ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
     )
+    db.commit()
     return success_response(data=new_data)

@@ -1,5 +1,7 @@
+import json
 import logging
 from typing import Optional
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.models.system_settings import SystemSetting
 
@@ -51,13 +53,11 @@ class AIDefaultsService:
         return dict(setting.value_json)
 
     def _seed(self):
-        existing = self.db.query(SystemSetting).filter(SystemSetting.key == "ai_defaults").first()
-        if not existing:
-            setting = SystemSetting(
-                key="ai_defaults",
-                value_json=DEFAULT_AI,
-                description="Global AI behavior defaults for all workflows",
-                category="ai",
-            )
-            self.db.add(setting)
-            self.db.commit()
+        self.db.execute(
+            text("INSERT INTO system_settings (key, value_json, description, category) "
+                 "VALUES (:key, CAST(:val AS jsonb), :desc, :cat) "
+                 "ON CONFLICT (key) DO NOTHING"),
+            {"key": "ai_defaults", "val": json.dumps(DEFAULT_AI),
+             "desc": "Global AI behavior defaults for all workflows", "cat": "ai"}
+        )
+        self.db.commit()

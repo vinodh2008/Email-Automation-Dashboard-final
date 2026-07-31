@@ -12,6 +12,12 @@ from app.models.ai_approval import AIApproval
 from app.models.ai_provider import AIProvider
 from app.models.email_template import EmailTemplate
 from app.models.system_log import SystemLog
+from app.models.business_category import BusinessCategory
+from app.models.business_prompt_template import BusinessPromptTemplate
+from app.models.prompt_template_version import PromptTemplateVersion
+from app.models.prompt_variable import PromptVariable
+from app.models.category_workflow_mapping import CategoryWorkflowMapping
+from app.models.prompt_sandbox_session import PromptSandboxSession
 
 __all__ = [
     "MailboxAccount",
@@ -30,4 +36,10 @@ __all__ = [
     "AIProvider",
     "EmailTemplate",
     "SystemLog",
+    "BusinessCategory",
+    "BusinessPromptTemplate",
+    "PromptTemplateVersion",
+    "PromptVariable",
+    "CategoryWorkflowMapping",
+    "PromptSandboxSession",
 ]

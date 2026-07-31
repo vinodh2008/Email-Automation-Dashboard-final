@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -10,6 +11,14 @@ from app.core.responses import success_response
 router = APIRouter(prefix="/audit-log", tags=["audit-log"], dependencies=[Depends(get_current_user)])
 
 
+def _is_valid_uuid(val: str) -> bool:
+    try:
+        uuid.UUID(val)
+        return True
+    except ValueError:
+        return False
+
+
 @router.get("/")
 def get_audit_logs(
     entity_type: Optional[str] = Query(None),
@@ -19,6 +28,8 @@ def get_audit_logs(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_permission("view_users")),
 ):
+    if user_id and not _is_valid_uuid(user_id):
+        return success_response(data={"items": [], "total": 0, "limit": limit, "offset": offset})
     service = AdminAuditService(db)
     logs, total = service.get_logs(
         entity_type=entity_type,
@@ -30,6 +41,7 @@ def get_audit_logs(
     for log in logs:
         result.append({
             "id": str(log.id),
+            "user_id": str(log.user_id) if log.user_id else None,
             "user_email": log.user_email,
             "action": log.action,
             "entity_type": log.entity_type,
@@ -37,6 +49,7 @@ def get_audit_logs(
             "old_value": log.old_value,
             "new_value": log.new_value,
             "ip_address": log.ip_address,
+            "user_agent": log.user_agent,
             "created_at": log.created_at.isoformat() if log.created_at else None,
         })
     return success_response(data={"items": result, "total": total, "limit": limit, "offset": offset})

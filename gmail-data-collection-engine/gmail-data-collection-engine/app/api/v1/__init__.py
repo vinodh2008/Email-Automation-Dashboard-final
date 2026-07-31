@@ -19,6 +19,12 @@ from app.api.v1.ai_defaults import router as ai_defaults_router
 from app.api.v1.feature_flags import router as feature_flags_router
 from app.api.v1.audit_log import router as audit_log_router
 from app.api.v1.notification_settings import router as notification_settings_router
+from app.api.v1.business_categories import router as business_categories_router
+from app.api.v1.business_prompts import router as business_prompts_router
+from app.api.v1.prompt_variables import router as prompt_variables_router
+from app.api.v1.category_workflow_mappings import router as category_workflow_mappings_router
+from app.api.v1.prompt_sandbox import router as prompt_sandbox_router
+from app.api.v1.prompt_builder import router as prompt_builder_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(dashboard_router)
@@ -41,3 +47,9 @@ api_v1_router.include_router(ai_defaults_router)
 api_v1_router.include_router(feature_flags_router)
 api_v1_router.include_router(audit_log_router)
 api_v1_router.include_router(notification_settings_router)
+api_v1_router.include_router(business_categories_router)
+api_v1_router.include_router(business_prompts_router)
+api_v1_router.include_router(prompt_variables_router)
+api_v1_router.include_router(category_workflow_mappings_router)
+api_v1_router.include_router(prompt_sandbox_router)
+api_v1_router.include_router(prompt_builder_router)

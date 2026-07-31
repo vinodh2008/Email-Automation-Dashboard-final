@@ -21,13 +21,15 @@ export default function FeatureFlags({ setFeedback }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     (async () => {
       try {
         const data = await api.getFeatureFlags();
-        setFlags(data);
-      } catch { setFlags(null); }
-      finally { setLoading(false); }
+        if (!controller.signal.aborted) setFlags(data);
+      } catch { if (!controller.signal.aborted) setFlags(null); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
     })();
+    return () => controller.abort();
   }, []);
 
   const handleToggle = async (key) => {

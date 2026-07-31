@@ -23,13 +23,15 @@ export default function CompanySettings({ setFeedback }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
     (async () => {
       try {
         const data = await api.getCompanySettings();
-        setSettings(data);
-      } catch { setSettings(null); }
-      finally { setLoading(false); }
+        if (!controller.signal.aborted) setSettings(data);
+      } catch { if (!controller.signal.aborted) setSettings(null); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
     })();
+    return () => controller.abort();
   }, []);
 
   const handleSave = async () => {

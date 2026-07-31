@@ -34,7 +34,6 @@ class AdminAuditService:
             user_agent=user_agent,
         )
         self.db.add(entry)
-        self.db.commit()
         logger.info(f"Audit: {action} {entity_type} {entity_id or ''}")
 
     def get_logs(

@@ -786,4 +786,392 @@ export const api = {
       return [];
     }
   },
+
+  getAIMetrics: async () => {
+    try {
+      const response = await axiosClient.get('/ai-providers/metrics');
+      return response || { summary: {}, providers: [] };
+    } catch (e) {
+      console.error('Failed to fetch AI metrics:', e);
+      return { summary: {}, providers: [] };
+    }
+  },
+
+  // ─── Business Categories ────────────────────────────────────────────
+  getBusinessCategories: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.status) queryParams.append('status', params.status);
+      if (params.search) queryParams.append('search', params.search);
+      const response = await axiosClient.get(`/business-categories?${queryParams.toString()}`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch business categories:', e);
+      return [];
+    }
+  },
+
+  getBusinessCategory: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-categories/${id}`);
+      return response || null;
+    } catch (e) {
+      console.error('Failed to fetch business category:', e);
+      return null;
+    }
+  },
+
+  createBusinessCategory: async (payload) => {
+    try {
+      const response = await axiosClient.post('/business-categories', payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  updateBusinessCategory: async (id, payload) => {
+    try {
+      const response = await axiosClient.put(`/business-categories/${id}`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  deleteBusinessCategory: async (id) => {
+    try {
+      await axiosClient.delete(`/business-categories/${id}`);
+      return true;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  setDefaultBusinessCategory: async (id) => {
+    try {
+      const response = await axiosClient.put(`/business-categories/${id}/set-default`);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getCategoryPrompts: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-categories/${id}/prompts`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch category prompts:', e);
+      return [];
+    }
+  },
+
+  getCategoryWorkflows: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-categories/${id}/workflows`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch category workflows:', e);
+      return [];
+    }
+  },
+
+  updateCategoryAIConfig: async (id, payload) => {
+    try {
+      const response = await axiosClient.put(`/business-categories/${id}/ai-config`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getCategoryMetrics: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-categories/${id}/metrics`);
+      return response || {};
+    } catch (e) {
+      console.error('Failed to fetch category metrics:', e);
+      return {};
+    }
+  },
+
+  // ─── Business Prompts ──────────────────────────────────────────────
+  getBusinessPrompts: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.category_id) queryParams.append('category_id', params.category_id);
+      if (params.status) queryParams.append('status', params.status);
+      const response = await axiosClient.get(`/business-prompts?${queryParams.toString()}`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch business prompts:', e);
+      return [];
+    }
+  },
+
+  getBusinessPrompt: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-prompts/${id}`);
+      return response || null;
+    } catch (e) {
+      console.error('Failed to fetch business prompt:', e);
+      return null;
+    }
+  },
+
+  createBusinessPrompt: async (payload) => {
+    try {
+      const response = await axiosClient.post('/business-prompts', payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  updateBusinessPrompt: async (id, payload) => {
+    try {
+      const response = await axiosClient.put(`/business-prompts/${id}`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  deleteBusinessPrompt: async (id) => {
+    try {
+      await axiosClient.delete(`/business-prompts/${id}`);
+      return true;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  publishBusinessPrompt: async (id) => {
+    try {
+      const response = await axiosClient.post(`/business-prompts/${id}/publish`);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  rollbackBusinessPrompt: async (id, payload) => {
+    try {
+      const response = await axiosClient.post(`/business-prompts/${id}/rollback`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  archiveBusinessPrompt: async (id) => {
+    try {
+      const response = await axiosClient.post(`/business-prompts/${id}/archive`);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  cloneBusinessPrompt: async (id, payload) => {
+    try {
+      const response = await axiosClient.post(`/business-prompts/${id}/clone`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getPromptVersions: async (id) => {
+    try {
+      const response = await axiosClient.get(`/business-prompts/${id}/versions`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch prompt versions:', e);
+      return [];
+    }
+  },
+
+  getPromptVersion: async (promptId, versionNumber) => {
+    try {
+      const response = await axiosClient.get(`/business-prompts/${promptId}/versions/${versionNumber}`);
+      return response || null;
+    } catch (e) {
+      console.error('Failed to fetch prompt version:', e);
+      return null;
+    }
+  },
+
+  // ─── Prompt Variables ──────────────────────────────────────────────
+  getPromptVariables: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.scope) queryParams.append('scope', params.scope);
+      if (params.adapter) queryParams.append('adapter', params.adapter);
+      if (params.category) queryParams.append('category', params.category);
+      const response = await axiosClient.get(`/prompt-variables?${queryParams.toString()}`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch prompt variables:', e);
+      return [];
+    }
+  },
+
+  getPromptVariableRegistry: async () => {
+    try {
+      const response = await axiosClient.get('/prompt-variables/registry');
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch variable registry:', e);
+      return [];
+    }
+  },
+
+  getVariableAdapters: async () => {
+    try {
+      const response = await axiosClient.get('/prompt-variables/adapters');
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch variable adapters:', e);
+      return [];
+    }
+  },
+
+  createPromptVariable: async (payload) => {
+    try {
+      const response = await axiosClient.post('/prompt-variables', payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  updatePromptVariable: async (id, payload) => {
+    try {
+      const response = await axiosClient.put(`/prompt-variables/${id}`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  deletePromptVariable: async (id) => {
+    try {
+      await axiosClient.delete(`/prompt-variables/${id}`);
+      return true;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // ─── Category Workflow Mappings ────────────────────────────────────
+  getCategoryWorkflowMappings: async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.category_id) queryParams.append('category_id', params.category_id);
+      if (params.workflow_id) queryParams.append('workflow_id', params.workflow_id);
+      const response = await axiosClient.get(`/category-workflow-mappings?${queryParams.toString()}`);
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch category workflow mappings:', e);
+      return [];
+    }
+  },
+
+  createCategoryWorkflowMapping: async (payload) => {
+    try {
+      const response = await axiosClient.post('/category-workflow-mappings', payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  updateCategoryWorkflowMapping: async (id, payload) => {
+    try {
+      const response = await axiosClient.put(`/category-workflow-mappings/${id}`, payload);
+      return response;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  deleteCategoryWorkflowMapping: async (id) => {
+    try {
+      await axiosClient.delete(`/category-workflow-mappings/${id}`);
+      return true;
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  // ─── Prompt Sandbox ────────────────────────────────────────────────
+  runSandboxTest: async (payload) => {
+    try {
+      const response = await axiosClient.post('/prompt-sandbox/test', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  validateSandbox: async (payload) => {
+    try {
+      const response = await axiosClient.post('/prompt-sandbox/validate', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  getSandboxHistory: async () => {
+    try {
+      const response = await axiosClient.get('/prompt-sandbox/history');
+      return response || [];
+    } catch (e) {
+      console.error('Failed to fetch sandbox history:', e);
+      return [];
+    }
+  },
+
+  getSandboxSession: async (sessionId) => {
+    try {
+      const response = await axiosClient.get(`/prompt-sandbox/history/${sessionId}`);
+      return response || null;
+    } catch (e) {
+      console.error('Failed to fetch sandbox session:', e);
+      return null;
+    }
+  },
+
+  // ─── Prompt Builder ────────────────────────────────────────────────
+  buildPrompt: async (payload) => {
+    try {
+      const response = await axiosClient.post('/prompt-builder/build', payload);
+      return response || {};
+    } catch (e) {
+      throw e;
+    }
+  },
+
+  detectVariables: async (promptContent) => {
+    try {
+      const response = await axiosClient.post('/prompt-builder/detect-variables', { prompt_content: promptContent });
+      return response || { variables: [] };
+    } catch (e) {
+      console.error('Failed to detect variables:', e);
+      return { variables: [] };
+    }
+  },
+
+  estimateCost: async (payload) => {
+    try {
+      const response = await axiosClient.post('/prompt-builder/estimate-cost', payload);
+      return response || {};
+    } catch (e) {
+      console.error('Failed to estimate cost:', e);
+      return {};
+    }
+  },
 };

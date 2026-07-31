@@ -23,27 +23,31 @@ export default function SecurityAudit({ setFeedback }) {
   const [activeSection, setActiveSection] = useState('audit');
   const [auditLogs, setAuditLogs] = useState({ items: [], total: 0 });
   const [entityFilter, setEntityFilter] = useState('');
+  const [auditPage, setAuditPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState(null);
   const [saving, setSaving] = useState(false);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     loadAuditLogs();
-  }, [entityFilter]);
+  }, [entityFilter, auditPage]);
 
   useEffect(() => {
+    const controller = new AbortController();
     (async () => {
       try {
         const data = await api.getNotificationSettings();
-        setNotifications(data);
-      } catch { setNotifications(null); }
+        if (!controller.signal.aborted) setNotifications(data);
+      } catch { if (!controller.signal.aborted) setNotifications(null); }
     })();
+    return () => controller.abort();
   }, []);
 
   const loadAuditLogs = async () => {
     try {
       setLoading(true);
-      const params = { limit: 50 };
+      const params = { limit: PAGE_SIZE, offset: auditPage * PAGE_SIZE };
       if (entityFilter) params.entity_type = entityFilter;
       const data = await api.getAuditLogs(params);
       setAuditLogs(data);
@@ -129,6 +133,18 @@ export default function SecurityAudit({ setFeedback }) {
               </div>
             )}
           </div>
+
+          {auditLogs.total > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-xs text-gray-400">
+                Showing {auditPage * PAGE_SIZE + 1}-{Math.min((auditPage + 1) * PAGE_SIZE, auditLogs.total)} of {auditLogs.total}
+              </span>
+              <div className="flex gap-2">
+                <button onClick={() => setAuditPage(p => Math.max(0, p - 1))} disabled={auditPage === 0} className="px-3 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">Prev</button>
+                <button onClick={() => setAuditPage(p => p + 1)} disabled={(auditPage + 1) * PAGE_SIZE >= auditLogs.total} className="px-3 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

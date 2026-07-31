@@ -43,6 +43,7 @@ const SystemConfig = () => {
   const [testResults, setTestResults] = useState({});
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [disconnectDeleteData, setDisconnectDeleteData] = useState(false);
+  const [aiMetrics, setAiMetrics] = useState(null);
 
   function getDefaultProviderForm() {
     return {
@@ -53,12 +54,20 @@ const SystemConfig = () => {
   }
 
   useEffect(() => {
+    const controller = new AbortController();
     fetchSystemStatus();
     fetchAIProviders();
     fetchProviderHealth();
+    fetchAIMetrics();
     const interval = setInterval(fetchSystemStatus, 15000);
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); controller.abort(); };
   }, []);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 5000);
+    return () => clearTimeout(timer);
+  }, [feedback]);
 
   const fetchSystemStatus = async () => {
     try {
@@ -82,6 +91,13 @@ const SystemConfig = () => {
     } catch (e) { console.error('Failed to load provider health:', e); }
   };
 
+  const fetchAIMetrics = async () => {
+    try {
+      const data = await api.getAIMetrics();
+      setAiMetrics(data);
+    } catch (e) { console.error('Failed to load AI metrics:', e); }
+  };
+
   const handleConnect = async () => {
     try {
       setActionLoading(true); setFeedback(null);
@@ -94,7 +110,9 @@ const SystemConfig = () => {
   const handleDisconnect = async () => {
     try {
       setActionLoading(true); setFeedback(null); setShowDisconnectModal(false);
-      const res = await disconnectMailbox(null, disconnectDeleteData);
+      const mailboxId = activeMailbox?.id;
+      if (!mailboxId) { setFeedback({ type: 'error', message: 'No active mailbox to disconnect' }); return; }
+      const res = await disconnectMailbox(mailboxId, disconnectDeleteData);
       setFeedback(res.success ? { type: 'success', message: disconnectDeleteData ? 'Mailbox disconnected and data deleted' : 'Mailbox disconnected' } : { type: 'error', message: res.error || 'Failed to disconnect' });
     } catch (e) { setFeedback({ type: 'error', message: 'Failed to disconnect' }); }
     finally { setActionLoading(false); setDisconnectDeleteData(false); }
@@ -148,14 +166,21 @@ const SystemConfig = () => {
       const result = response?.data || response || {};
       setTestResults(prev => ({
         ...prev, [providerId]: {
-          loading: false, success: !!result.success,
-          message: result.success ? (result.message || 'OK') : (result.error || 'Test failed'),
-          latency: result.latency_ms || null, model: result.model || null,
+          loading: false,
+          success: !!result.success,
+          checks: result.checks || {},
+          message: result.success ? (result.message || 'All checks passed') : (result.error || 'Test failed'),
+          friendly_message: result.friendly_message || null,
+          recommended_action: result.recommended_action || null,
+          error_code: result.error_code || null,
+          total_latency_ms: result.total_latency_ms || null,
+          tokens_used: result.tokens_used || 0,
+          timestamp: result.timestamp || null,
         }
       }));
-      await fetchAIProviders(); await fetchProviderHealth();
+      await fetchAIProviders(); await fetchProviderHealth(); fetchAIMetrics();
     } catch (e) {
-      setTestResults(prev => ({ ...prev, [providerId]: { loading: false, success: false, message: 'Test failed: ' + (e?.message || 'Unknown') } }));
+      setTestResults(prev => ({ ...prev, [providerId]: { loading: false, success: false, message: 'Test failed: ' + (e?.message || 'Unknown'), error_code: 'UNKNOWN', friendly_message: 'An unexpected error occurred.', recommended_action: 'Try again or contact support.' } }));
     }
   };
 
@@ -165,10 +190,20 @@ const SystemConfig = () => {
       const results = await api.testAllAIProviders();
       const newTestResults = {};
       (Array.isArray(results) ? results : []).forEach(r => {
-        newTestResults[r.id] = { loading: false, success: !!r.success, message: r.success ? (r.message || 'OK') : (r.error || 'Failed'), latency: r.latency_ms };
+        newTestResults[r.id] = {
+          loading: false,
+          success: !!r.success,
+          checks: r.checks || {},
+          message: r.success ? (r.message || 'All checks passed') : (r.error || 'Failed'),
+          friendly_message: r.friendly_message || null,
+          recommended_action: r.recommended_action || null,
+          error_code: r.error_code || null,
+          total_latency_ms: r.total_latency_ms || null,
+          tokens_used: r.tokens_used || 0,
+        };
       });
       setTestResults(prev => ({ ...prev, ...newTestResults }));
-      await fetchAIProviders(); await fetchProviderHealth();
+      await fetchAIProviders(); await fetchProviderHealth(); fetchAIMetrics();
       setFeedback({ type: 'success', message: 'All providers tested' });
     } catch (e) { setFeedback({ type: 'error', message: 'Failed to test all providers' }); }
     finally { setActionLoading(false); }
@@ -182,7 +217,11 @@ const SystemConfig = () => {
     } catch (e) { setFeedback({ type: 'error', message: e?.response?.data?.detail || 'Failed to delete' }); }
   };
 
-  const copyApiKey = (key) => { navigator.clipboard.writeText(key || ''); setFeedback({ type: 'success', message: 'API key copied' }); };
+  const copyApiKey = (key) => {
+    if (!key) return;
+    navigator.clipboard.writeText(key);
+    setFeedback({ type: 'success', message: 'API key copied' });
+  };
 
   if (user?.role !== 'Admin' && user?.role !== 'Editor') {
     return (
@@ -245,7 +284,7 @@ const SystemConfig = () => {
           )}
 
           {activeTab === 'ai_provider' && (
-            <AITab providers={sortedProviders} providerHealth={providerHealth} showProviderForm={showProviderForm} setShowProviderForm={setShowProviderForm} editingProvider={editingProvider} setEditingProvider={setEditingProvider} providerForm={providerForm} setProviderForm={setProviderForm} showApiKey={showApiKey} setShowApiKey={setShowApiKey} testResults={testResults} actionLoading={actionLoading} onSave={handleSaveProvider} onTest={handleTestProvider} onTestAll={handleTestAllProviders} onDelete={handleDeleteProvider} onCopyKey={copyApiKey} onProviderTypeChange={handleProviderTypeChange} getDefaultForm={getDefaultProviderForm} feedback={feedback} setFeedback={setFeedback} totalRequests={totalRequests} totalSuccess={totalSuccess} avgHealth={avgHealth} />
+            <AITab providers={sortedProviders} providerHealth={providerHealth} showProviderForm={showProviderForm} setShowProviderForm={setShowProviderForm} editingProvider={editingProvider} setEditingProvider={setEditingProvider} providerForm={providerForm} setProviderForm={setProviderForm} showApiKey={showApiKey} setShowApiKey={setShowApiKey} testResults={testResults} actionLoading={actionLoading} onSave={handleSaveProvider} onTest={handleTestProvider} onTestAll={handleTestAllProviders} onDelete={handleDeleteProvider} onCopyKey={copyApiKey} onProviderTypeChange={handleProviderTypeChange} getDefaultForm={getDefaultProviderForm} feedback={feedback} setFeedback={setFeedback} totalRequests={totalRequests} totalSuccess={totalSuccess} avgHealth={avgHealth} aiMetrics={aiMetrics} />
           )}
 
           {activeTab === 'company' && <CompanySettings setFeedback={setFeedback} />}
@@ -363,13 +402,16 @@ const AITab = ({
   providers, providerHealth, showProviderForm, setShowProviderForm, editingProvider, setEditingProvider,
   providerForm, setProviderForm, showApiKey, setShowApiKey, testResults, actionLoading,
   onSave, onTest, onTestAll, onDelete, onCopyKey, onProviderTypeChange, getDefaultForm,
-  feedback, setFeedback, totalRequests, totalSuccess, avgHealth
+  feedback, setFeedback, totalRequests, totalSuccess, avgHealth, aiMetrics
 }) => {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [expandedTest, setExpandedTest] = useState(null);
   const availableModels = PROVIDER_MODELS[providerForm.provider_type] || [];
 
   const healthMap = {};
   (providerHealth || []).forEach(h => { healthMap[h.id] = h; });
+
+  const summary = aiMetrics?.summary || {};
 
   return (
     <div className="space-y-6">
@@ -385,18 +427,43 @@ const AITab = ({
       </div>
 
       {providers.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-[10px] text-gray-400 uppercase font-semibold">Total Requests</div>
-            <div className="text-lg font-bold text-gray-900 dark:text-white">{totalRequests}</div>
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200"><BarChart3 className="w-4 h-4 text-indigo-600" /> AI Metrics Dashboard</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Total Requests</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{summary.total_requests || 0}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Success Rate</div>
+              <div className="text-lg font-bold text-green-600">{summary.success_rate || 100}%</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Tokens Used</div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">{(summary.total_tokens_used || 0).toLocaleString()}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Estimated Cost</div>
+              <div className="text-lg font-bold text-amber-600">${summary.estimated_cost_usd || '0.00'}</div>
+            </div>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-[10px] text-gray-400 uppercase font-semibold">Success Rate</div>
-            <div className="text-lg font-bold text-green-600">{totalRequests > 0 ? Math.round((totalSuccess / totalRequests) * 100) : 100}%</div>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-[10px] text-gray-400 uppercase font-semibold">Avg Health</div>
-            <div className={`text-lg font-bold ${avgHealth >= 80 ? 'text-green-600' : avgHealth >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{avgHealth}%</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Avg Latency</div>
+              <div className="text-sm font-bold text-gray-900 dark:text-white">{summary.avg_latency_ms || 0}ms</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Successful</div>
+              <div className="text-sm font-bold text-green-600">{summary.successful_requests || 0}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Failed</div>
+              <div className="text-sm font-bold text-red-600">{summary.failed_requests || 0}</div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-[10px] text-gray-400 uppercase font-semibold">Active Providers</div>
+              <div className="text-sm font-bold text-indigo-600">{summary.active_providers || 0} / {providers.length}</div>
+            </div>
           </div>
         </div>
       )}
@@ -438,7 +505,11 @@ const AITab = ({
                           <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'active' ? 'bg-green-500' : p.status === 'error' ? 'bg-red-500' : 'bg-gray-300'}`} />
                           {p.status === 'active' ? 'Connected' : p.status === 'error' ? 'Error' : 'Not Tested'}
                         </span>
-                        {tr && !tr.loading && <div className={`text-[10px] mt-0.5 ${tr.success ? 'text-green-500' : 'text-red-500'}`}>{tr.message} {tr.latency && `(${tr.latency}ms)`}</div>}
+                        {tr && !tr.loading && (
+                          <button onClick={() => setExpandedTest(expandedTest === p.id ? null : p.id)} className={`block text-[10px] mt-0.5 ${tr.success ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'} cursor-pointer underline`}>
+                            {tr.success ? 'All checks passed' : tr.message || 'View details'}
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         {h ? (
@@ -474,6 +545,10 @@ const AITab = ({
           </div>
         )}
 
+        {expandedTest && testResults[expandedTest] && (
+          <TestResultPanel result={testResults[expandedTest]} provider={providers.find(p => p.id === expandedTest)} onClose={() => setExpandedTest(null)} />
+        )}
+
         {providers.length > 1 && (
           <div className="bg-blue-50/60 dark:bg-blue-950/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 text-xs font-bold text-blue-800 dark:text-blue-300 mb-2"><Zap className="w-4 h-4" /> Automatic Failover Pipeline</div>
@@ -488,6 +563,67 @@ const AITab = ({
       </div>
 
       <ConfirmDialog isOpen={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)} onConfirm={() => { onDelete(deleteConfirmId); setDeleteConfirmId(null); }} title="Delete AI Provider" message="Are you sure you want to delete this AI provider? This action cannot be undone." confirmText="Delete" cancelText="Cancel" isDestructive={true} />
+    </div>
+  );
+};
+
+const TestResultPanel = ({ result, provider, onClose }) => {
+  if (!result) return null;
+  const checks = result.checks || {};
+  const checkOrder = ['dns', 'https', 'auth', 'model', 'completion', 'validation'];
+  const checkLabels = { dns: 'DNS Resolution', https: 'HTTPS Connectivity', auth: 'Authentication', model: 'Model Availability', completion: 'Completion Test', validation: 'Response Validation' };
+  const checkIcons = { dns: <Activity className="w-3.5 h-3.5" />, https: <Link2 className="w-3.5 h-3.5" />, auth: <Key className="w-3.5 h-3.5" />, model: <Brain className="w-3.5 h-3.5" />, completion: <Zap className="w-3.5 h-3.5" />, validation: <CheckCircle2 className="w-3.5 h-3.5" /> };
+
+  return (
+    <div className={`rounded-xl p-5 border space-y-4 ${result.success ? 'bg-green-50/60 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-800'}`}>
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-2">
+          {result.success ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <AlertTriangle className="w-5 h-5 text-red-600" />}
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Test Results: {provider?.name || 'Provider'}</h4>
+            <p className="text-[10px] text-gray-500">{result.timestamp ? new Date(result.timestamp).toLocaleString() : ''} {result.total_latency_ms ? `· Total: ${result.total_latency_ms}ms` : ''}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1 hover:bg-white/50 dark:hover:bg-gray-700 rounded"><X className="w-4 h-4 text-gray-500" /></button>
+      </div>
+
+      {!result.success && result.friendly_message && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-red-200 dark:border-red-700 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-red-700 dark:text-red-400">
+            <AlertTriangle className="w-4 h-4" /> {result.message || 'AI Connection Failed'}
+          </div>
+          <p className="text-xs text-red-600 dark:text-red-300">Reason: {result.friendly_message}</p>
+          {result.recommended_action && <p className="text-xs text-blue-600 dark:text-blue-400">Recommended Action: {result.recommended_action}</p>}
+          {result.error_code && <p className="text-[10px] text-gray-400">Error Code: {result.error_code}</p>}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {checkOrder.map(key => {
+          const check = checks[key];
+          if (!check) return null;
+          const isPass = check.status === 'pass';
+          const isFail = check.status === 'fail';
+          const isSkip = check.status === 'skip';
+          return (
+            <div key={key} className={`flex items-center gap-3 p-3 rounded-lg border text-xs ${isPass ? 'bg-white dark:bg-gray-800 border-green-200 dark:border-green-700' : isFail ? 'bg-white dark:bg-gray-800 border-red-200 dark:border-red-700' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isPass ? 'bg-green-100 text-green-600' : isFail ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-400'}`}>
+                {isPass ? <CheckCircle2 className="w-4 h-4" /> : isFail ? <X className="w-4 h-4" /> : <span className="text-[10px] font-bold">—</span>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1">{checkIcons[key]} {checkLabels[key]}</div>
+                <div className={`text-[10px] mt-0.5 ${isFail ? 'text-red-500' : isPass ? 'text-green-600' : 'text-gray-400'}`}>
+                  {isSkip ? check.message : isPass ? (check.message || check.response ? `OK${check.latency_ms ? ` · ${check.latency_ms}ms` : ''}${check.tokens_used ? ` · ${check.tokens_used} tokens` : ''}` : 'Passed') : (check.message || 'Failed')}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {result.tokens_used > 0 && (
+        <div className="text-[10px] text-gray-500 text-right">Tokens used in test: {result.tokens_used}</div>
+      )}
     </div>
   );
 };

@@ -38,6 +38,8 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
     { name: 'Users', path: '/users', icon: 'group', roles: ['Admin'] },
     { name: 'Roles', path: '/roles', icon: 'admin_panel_settings', roles: ['Admin'] },
     { name: 'Templates', path: '/templates', icon: 'description', roles: ['Admin', 'Editor'] },
+    { name: 'Business Categories', path: '/business-categories', icon: 'category', roles: ['Admin'] },
+    { name: 'Prompt Manager', path: '/prompt-manager', icon: 'edit_note', roles: ['Admin'] },
     { name: 'Logs', path: '/logs', icon: 'list_alt', roles: ['Admin'] },
     { name: 'Settings', path: '/settings', icon: 'settings', roles: ['Admin'] },
     { name: 'System Monitoring', path: '/system-monitoring', icon: 'monitor_heart', roles: ['Admin'] },

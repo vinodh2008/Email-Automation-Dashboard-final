@@ -46,8 +46,16 @@ async def lifespan(app: FastAPI):
     """
     logger.info("[LIFESPAN] Starting FastAPI application services...")
     try:
-        # 0. Ensure database schema is up to date
-        ensure_full_schema()
+        # 0. Ensure database schema is up to date (with timeout protection)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(ensure_full_schema)
+            try:
+                future.result(timeout=90)
+            except concurrent.futures.TimeoutError:
+                logger.warning("[LIFESPAN] Schema verification timed out - continuing startup (tables may already exist)")
+            except Exception as e:
+                logger.warning(f"[LIFESPAN] Schema verification error - continuing startup: {e}")
         
         # 1. Clear abandoned locks from crashed runs
         _recover_stale_locks()
