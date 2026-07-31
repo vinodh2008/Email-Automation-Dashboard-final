@@ -6,6 +6,7 @@ from app.models.business_category import BusinessCategory
 from app.repositories.business_category_repository import BusinessCategoryRepository
 from app.repositories.business_prompt_repository import BusinessPromptRepository
 from app.repositories.category_workflow_repository import CategoryWorkflowRepository
+from app.repositories.business_category_metrics_repository import BusinessCategoryMetricsRepository
 
 logger = logging.getLogger("business_category_service")
 
@@ -20,6 +21,7 @@ class BusinessCategoryService:
         self.repo = BusinessCategoryRepository(db)
         self.prompt_repo = BusinessPromptRepository(db)
         self.mapping_repo = CategoryWorkflowRepository(db)
+        self.metrics_repo = BusinessCategoryMetricsRepository(db)
 
     def list_categories(self) -> List[BusinessCategory]:
         return self.repo.get_by_display_order()
@@ -120,14 +122,8 @@ class BusinessCategoryService:
         category = self.repo.get_by_id(category_id)
         if not category:
             return {}
-        return {
-            'emails_processed': category.emails_processed or 0,
-            'drafts_generated': category.drafts_generated or 0,
-            'approval_rate': category.approval_rate,
-            'avg_generation_time_ms': category.avg_generation_time_ms,
-            'avg_tokens_used': category.avg_tokens_used,
-            'last_used_at': category.last_used_at.isoformat() if category.last_used_at else None,
-        }
+        metrics = self.metrics_repo.get_by_category(category_id)
+        return self.metrics_repo.to_dict(metrics)
 
     def update_ai_config(self, category_id: str, ai_config: dict, user_id: str = None) -> Optional[BusinessCategory]:
         category = self.repo.get_by_id(category_id)

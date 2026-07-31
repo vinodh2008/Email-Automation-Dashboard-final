@@ -13,6 +13,7 @@ from app.models.ai_provider import AIProvider
 from app.models.email_template import EmailTemplate
 from app.models.system_log import SystemLog
 from app.models.business_category import BusinessCategory
+from app.models.business_category_metrics import BusinessCategoryMetrics
 from app.models.business_prompt_template import BusinessPromptTemplate
 from app.models.prompt_template_version import PromptTemplateVersion
 from app.models.prompt_variable import PromptVariable
@@ -37,6 +38,7 @@ __all__ = [
     "EmailTemplate",
     "SystemLog",
     "BusinessCategory",
+    "BusinessCategoryMetrics",
     "BusinessPromptTemplate",
     "PromptTemplateVersion",
     "PromptVariable",

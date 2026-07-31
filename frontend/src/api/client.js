@@ -1164,14 +1164,4 @@ export const api = {
       return { variables: [] };
     }
   },
-
-  estimateCost: async (payload) => {
-    try {
-      const response = await axiosClient.post('/prompt-builder/estimate-cost', payload);
-      return response || {};
-    } catch (e) {
-      console.error('Failed to estimate cost:', e);
-      return {};
-    }
-  },
 };

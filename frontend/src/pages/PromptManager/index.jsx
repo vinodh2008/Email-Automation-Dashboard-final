@@ -410,10 +410,9 @@ export default function PromptManager() {
                 <div className="space-y-2">
                   <div className="font-bold text-sm text-on-surface">Rendered Prompt:</div>
                   <div className="bg-surface rounded p-2 font-mono whitespace-pre-wrap">{sandboxResult.rendered_prompt}</div>
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-[10px]">
                     <div><strong>Length:</strong> {sandboxResult.prompt_length_chars} chars</div>
                     <div><strong>Tokens:</strong> ~{sandboxResult.estimated_tokens}</div>
-                    <div><strong>Cost:</strong> ${sandboxResult.estimated_cost_usd?.toFixed(6) || '0.00'}</div>
                   </div>
                   {sandboxResult.warnings?.length > 0 && (
                     <div className="mt-2">{sandboxResult.warnings.map((w, i) => <div key={i} className="text-[#9A6700]"><AlertTriangle className="inline mr-1" size={12} /> {w}</div>)}</div>

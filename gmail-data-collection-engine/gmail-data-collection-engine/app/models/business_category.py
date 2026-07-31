@@ -33,15 +33,7 @@ class BusinessCategory(Base):
     ai_timeout = Column(Integer, nullable=True)
     ai_retry_count = Column(Integer, nullable=True)
 
-    # Category Metrics
-    emails_processed = Column(Integer, nullable=False, server_default=text("0"))
-    drafts_generated = Column(Integer, nullable=False, server_default=text("0"))
-    approval_rate = Column(Float, nullable=True)
-    avg_generation_time_ms = Column(Integer, nullable=True)
-    avg_tokens_used = Column(Integer, nullable=True)
-    last_used_at = Column(DateTime(timezone=True), nullable=True)
-
-    # Reserved for Future Phases
+    # Reserved for Phase 2B+ (matching, rules, knowledge, validation, decision, approval)
     matching_strategy = Column(String(50), nullable=True)
     confidence_threshold = Column(Float, nullable=True)
     knowledge_source_id = Column(UUID(as_uuid=True), nullable=True)

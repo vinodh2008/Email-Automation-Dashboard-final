@@ -276,12 +276,6 @@ def ensure_full_schema():
                 ai_max_tokens INT NULL,
                 ai_timeout INT NULL,
                 ai_retry_count INT NULL,
-                emails_processed INT NOT NULL DEFAULT 0,
-                drafts_generated INT NOT NULL DEFAULT 0,
-                approval_rate FLOAT NULL,
-                avg_generation_time_ms INT NULL,
-                avg_tokens_used INT NULL,
-                last_used_at TIMESTAMPTZ NULL,
                 matching_strategy VARCHAR(50) NULL,
                 confidence_threshold FLOAT NULL,
                 knowledge_source_id UUID NULL,
@@ -295,6 +289,21 @@ def ensure_full_schema():
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_business_categories_priority ON business_categories(priority);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_business_categories_display_order ON business_categories(display_order);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_business_categories_status ON business_categories(status);"))
+
+        # 14b. Business Category Metrics (separate from configuration)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS business_category_metrics (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_category_id UUID NOT NULL UNIQUE REFERENCES business_categories(id) ON DELETE CASCADE,
+                emails_processed INT NOT NULL DEFAULT 0,
+                drafts_generated INT NOT NULL DEFAULT 0,
+                approval_rate FLOAT NULL,
+                avg_generation_time_ms INT NULL,
+                avg_tokens_used INT NULL,
+                last_used_at TIMESTAMPTZ NULL,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """))
 
         # 15. Sprint 6 Phase 2A: Business Prompt Templates
         conn.execute(text("""
@@ -411,8 +420,6 @@ def ensure_full_schema():
                 template_version INT NULL,
                 variable_values JSONB NOT NULL DEFAULT '{}',
                 variables_snapshot JSONB NULL,
-                company_settings_snapshot JSONB NULL,
-                provider_snapshot JSONB NULL,
                 rendered_prompt TEXT NULL,
                 validation_result JSONB NULL,
                 variables_used JSONB NULL,
@@ -420,7 +427,6 @@ def ensure_full_schema():
                 variables_unknown JSONB NULL,
                 prompt_length_chars INT NULL,
                 estimated_tokens INT NULL,
-                estimated_cost_usd FLOAT NULL,
                 warnings JSONB NULL DEFAULT '[]',
                 status VARCHAR(30) NOT NULL DEFAULT 'pending',
                 created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,

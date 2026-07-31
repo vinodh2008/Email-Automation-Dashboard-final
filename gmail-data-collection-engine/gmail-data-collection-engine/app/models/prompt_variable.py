@@ -13,7 +13,7 @@ class PromptVariable(Base):
     description = Column(Text, nullable=True)
     data_type = Column(String(30), nullable=False, server_default=text("'STRING'"))
     scope = Column(String(30), nullable=False, server_default=text("'GLOBAL'"))
-    source_adapter = Column(String(50), nullable=False, server_default=text("'ManualAdapter'"))
+    source_adapter = Column(String(50), nullable=False, server_default=text("'STATIC'"))
     source_config = Column(JSONB, nullable=True)
     default_value = Column(Text, nullable=True)
     is_required = Column(Boolean, nullable=False, server_default=text("false"))

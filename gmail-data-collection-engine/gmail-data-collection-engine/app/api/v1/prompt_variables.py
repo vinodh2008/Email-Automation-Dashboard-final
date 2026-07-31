@@ -18,7 +18,7 @@ class PromptVariableCreate(BaseModel):
     description: Optional[str] = None
     data_type: Optional[str] = 'STRING'
     scope: Optional[str] = 'GLOBAL'
-    source_adapter: Optional[str] = 'ManualAdapter'
+    source_adapter: Optional[str] = 'STATIC'
     source_config: Optional[dict] = None
     default_value: Optional[str] = None
     is_required: Optional[bool] = False

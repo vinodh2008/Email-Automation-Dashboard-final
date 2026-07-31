@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Star, StarOff, BarChart3, Bot, ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { Modal } from '../../components/Modal';
@@ -166,28 +166,7 @@ export default function BusinessCategories() {
 
               {expandedId === cat.id && (
                 <div className="px-4 pb-4 border-t border-outline-variant/50 pt-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Metrics</h4>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-surface p-2 rounded">
-                          <span className="text-on-surface-variant">Emails Processed</span>
-                          <p className="text-on-surface font-bold text-lg">{cat.emails_processed || 0}</p>
-                        </div>
-                        <div className="bg-surface p-2 rounded">
-                          <span className="text-on-surface-variant">Approval Rate</span>
-                          <p className="text-on-surface font-bold text-lg">{cat.approval_rate ? `${cat.approval_rate}%` : '—'}</p>
-                        </div>
-                        <div className="bg-surface p-2 rounded">
-                          <span className="text-on-surface-variant">Drafts Generated</span>
-                          <p className="text-on-surface font-bold text-lg">{cat.drafts_generated || 0}</p>
-                        </div>
-                        <div className="bg-surface p-2 rounded">
-                          <span className="text-on-surface-variant">Avg Generation</span>
-                          <p className="text-on-surface font-bold text-lg">{cat.avg_generation_time_ms ? `${cat.avg_generation_time_ms}ms` : '—'}</p>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">AI Config Override</h4>
                       <div className="bg-surface p-2 rounded text-xs space-y-1">
@@ -219,7 +198,8 @@ export default function BusinessCategories() {
                     <span>Priority: {cat.priority}</span>
                     <span>Display Order: {cat.display_order}</span>
                     <span>Status: {cat.status}</span>
-                    <span>ID: {cat.id?.substring(0, 8)}</span>
+                    <span>Prompts: {cat.prompt_count || 0}</span>
+                    <span>Workflows: {cat.workflow_count || 0}</span>
                   </div>
                 </div>
               )}

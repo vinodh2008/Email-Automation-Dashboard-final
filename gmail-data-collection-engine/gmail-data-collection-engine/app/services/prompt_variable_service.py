@@ -10,7 +10,7 @@ logger = logging.getLogger("prompt_variable_service")
 NAME_REGEX = re.compile(r'^[a-z][a-z0-9_]*$')
 VALID_DATA_TYPES = {'STRING', 'LONG_TEXT', 'EMAIL', 'PHONE', 'DATE', 'TIME', 'URL', 'NUMBER', 'FLOAT', 'BOOLEAN', 'JSON', 'HTML', 'MARKDOWN'}
 VALID_SCOPES = {'GLOBAL', 'CATEGORY', 'WORKFLOW', 'PROMPT'}
-VALID_ADAPTERS = {'ManualAdapter', 'EmailAdapter', 'CompanyAdapter', 'StaticAdapter', 'CRMAdapter', 'ERPAdapter', 'KnowledgeAdapter', 'FormulaAdapter'}
+VALID_ADAPTERS = {'STATIC', 'EMAIL', 'COMPANY', 'CUSTOM'}
 
 
 class PromptVariableService:
@@ -47,7 +47,7 @@ class PromptVariableService:
             description=data.get('description'),
             data_type=data.get('data_type', 'STRING'),
             scope=data.get('scope', 'GLOBAL'),
-            source_adapter=data.get('source_adapter', 'ManualAdapter'),
+            source_adapter=data.get('source_adapter', 'STATIC'),
             source_config=data.get('source_config'),
             default_value=data.get('default_value'),
             is_required=data.get('is_required', False),
@@ -91,14 +91,10 @@ class PromptVariableService:
 
     def get_adapters(self) -> list:
         return [
-            {'name': 'ManualAdapter', 'description': 'Admin-provided static value', 'phase': '2A'},
-            {'name': 'StaticAdapter', 'description': 'Hardcoded in configuration', 'phase': '2A'},
-            {'name': 'EmailAdapter', 'description': 'Pulled from incoming email fields', 'phase': '3'},
-            {'name': 'CompanyAdapter', 'description': 'Pulled from company settings', 'phase': '3'},
-            {'name': 'CRMAdapter', 'description': 'External CRM API integration', 'phase': 'Future'},
-            {'name': 'ERPAdapter', 'description': 'External ERP API integration', 'phase': 'Future'},
-            {'name': 'KnowledgeAdapter', 'description': 'Knowledge base lookup', 'phase': '2C'},
-            {'name': 'FormulaAdapter', 'description': 'Computed/derived values', 'phase': 'Future'},
+            {'name': 'STATIC', 'description': 'Admin-provided static value', 'phase': '2A'},
+            {'name': 'EMAIL', 'description': 'Pulled from incoming email fields', 'phase': '3'},
+            {'name': 'COMPANY', 'description': 'Pulled from company settings', 'phase': '3'},
+            {'name': 'CUSTOM', 'description': 'Custom source (CRM, ERP, Knowledge, Formula - Phase 2B+)', 'phase': '2B+'},
         ]
 
     def _validate(self, data: dict, partial: bool = False):
